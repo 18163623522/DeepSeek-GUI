@@ -119,3 +119,44 @@ export function writeSearchSeen(feedId: string, keys: string[]): PaperSearchSeen
   writeJson(`${SEEN_PREFIX}${feedId}`, seen)
   return seen
 }
+
+// ---- selected sources (shared by direct search and Agent research) --------
+
+const SOURCES_KEY = 'kun.paper.searchSources'
+
+export function readSearchSources(): PaperSearchSource[] {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(SOURCES_KEY) ?? 'null') as unknown
+    if (Array.isArray(raw)) {
+      const valid = raw.filter((value): value is PaperSearchSource =>
+        (PAPER_SEARCH_SOURCES as readonly string[]).includes(String(value))
+      )
+      if (valid.length) return valid
+    }
+  } catch {
+    // Storage may be unavailable or hold stale data; fall back to defaults.
+  }
+  return [...DEFAULT_PAPER_SEARCH_SOURCES]
+}
+
+export function writeSearchSources(sources: PaperSearchSource[]): void {
+  try {
+    window.localStorage.setItem(SOURCES_KEY, JSON.stringify(sources))
+  } catch {
+    // Non-essential convenience; ignore storage failures.
+  }
+}
+
+/** Four-digit year within 1900-2100, else undefined. */
+export function parseSearchYear(raw: string): number | undefined {
+  const value = Number(raw)
+  return /^\d{4}$/.test(raw.trim()) && value >= 1900 && value <= 2100 ? value : undefined
+}
+
+/** Toggle one source, keeping catalog order and at least one source selected. */
+export function toggleSearchSource(current: readonly PaperSearchSource[], source: PaperSearchSource): PaperSearchSource[] {
+  const next = current.includes(source)
+    ? current.filter((value) => value !== source)
+    : PAPER_SEARCH_SOURCES.filter((value) => value === source || current.includes(value))
+  return next.length ? next : [...current]
+}

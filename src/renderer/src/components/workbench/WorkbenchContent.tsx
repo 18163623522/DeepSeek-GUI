@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { WorkbenchLeftSidebar } from './WorkbenchLeftSidebar'
 import { WorkbenchStageRouter } from './WorkbenchStageRouter'
+import { WriteAssistantStageContext } from '../write/WriteAssistantStageContext'
 import { AgentBrowserFloatingPreview } from '../AgentBrowserFloatingPreview'
 import { BUILTIN_RIGHT_PANEL_IDS } from '../../extensions/contribution-ids'
 import {
@@ -43,7 +44,8 @@ export function WorkbenchContent({ context }: { context: Context }): ReactElemen
     extensionSurfaceItems, openExtensionSurface, openCodeRightTool, currentSideRunningCount,
     extensionRightRailItems, selectRightRailExtension, imageAnnotationHost, planOverlay,
     openManagedExtensionView, activeExtensionAuxiliaryPanel, workspaceContextMenu, activeGuiPlan,
-    focusedCanvasWorkspace, openGeneratedDocuments, openGeneratedDocumentPreview
+    focusedCanvasWorkspace, openGeneratedDocuments, openGeneratedDocumentPreview,
+    writeAssistantStageProps
   } = context
   const normalizedRoute = normalizeWorkbenchRoute(route)
   const activeConversationThread = threads.find((thread: any) => thread.id === activeThreadId)
@@ -130,6 +132,7 @@ export function WorkbenchContent({ context }: { context: Context }): ReactElemen
           </div>
         </main>
       ) : (
+      <WriteAssistantStageContext.Provider value={writeAssistantStageProps ?? null}>
       <WorkbenchStageRouter
         route={normalizedRoute}
         leftSidebarCollapsed={leftSidebarCollapsed}
@@ -268,6 +271,7 @@ export function WorkbenchContent({ context }: { context: Context }): ReactElemen
           onOpenView: openManagedExtensionView
         }}
       />
+      </WriteAssistantStageContext.Provider>
       )}
       <AgentBrowserFloatingPreview activeThreadId={activeThreadId} />
       {focusedCanvasWorkspace}

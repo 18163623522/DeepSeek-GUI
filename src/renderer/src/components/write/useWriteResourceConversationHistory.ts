@@ -75,7 +75,8 @@ function scopeMatchesCurrentResource(scope: ResourceScope): boolean {
       activeFilePath: state.activeFilePath,
       unitDirs: Object.keys(usePaperStore.getState().unitsByDir),
       entriesByDir: state.entriesByDir,
-      view: paperModeView(state)
+      view: paperModeView(state),
+      researchSessionId: state.paperResearch.sessionId
     })
     return writeFileKey(resource) === scope.resourceId
   }
@@ -139,6 +140,7 @@ export function useWriteResourceConversationHistory(
     }))
   )
   const paperView = useWriteWorkspaceStore(paperModeView)
+  const researchSessionId = useWriteWorkspaceStore((s) => s.paperResearch.sessionId)
   const {
     activeThreadId,
     threads,
@@ -196,7 +198,8 @@ export function useWriteResourceConversationHistory(
         activeFilePath,
         unitDirs: Object.keys(usePaperStore.getState().unitsByDir),
         entriesByDir: state.entriesByDir,
-        view: paperView
+        view: paperView,
+        researchSessionId
       })
       const fileKey = writeFileKey(resource)
       if (!fileKey) return null
@@ -238,7 +241,7 @@ export function useWriteResourceConversationHistory(
       ),
       workflowLocked: false
     }
-  }, [activeFilePath, activeWhiteboard, activeWhiteboardId, paperView, workSurface, workspaceRoot])
+  }, [activeFilePath, activeWhiteboard, activeWhiteboardId, paperView, researchSessionId, workSurface, workspaceRoot])
 
   useEffect(() => {
     setCachedThreads({})

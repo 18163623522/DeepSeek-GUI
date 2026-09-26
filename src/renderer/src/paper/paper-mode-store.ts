@@ -8,7 +8,7 @@ import type {
   PaperVenueCatalogEntry,
   PaperVenueItem
 } from '@shared/paper/paper-library-types'
-import type { PaperSearchResponse } from '@shared/paper/paper-search'
+import type { PaperSearchResponse, PaperSearchSource } from '@shared/paper/paper-search'
 import type { PaperModeView } from './paper-conversation-scope'
 import { usePaperStore } from '../write/paper/paper-store'
 
@@ -18,6 +18,13 @@ export const PAPER_DEFAULT_SORT: PaperLibrarySort = { key: 'importedAt', dir: 'd
 
 export function emptyPaperLibraryFilter(): PaperLibraryFilter {
   return { query: '', status: '', tag: '', group: '', year: '', source: '', recent: false }
+}
+
+export type PaperResearchDraft = {
+  query: string
+  sources: PaperSearchSource[]
+  yearFrom?: number
+  yearTo?: number
 }
 
 export type PaperDiscoverState = {
@@ -44,14 +51,11 @@ export type PaperDiscoverState = {
   searchResult: PaperSearchResponse | null
   searchLoading: boolean
   searchError: string | null
-  /** Search page mode: direct multi-source search vs. delegated agent search. */
-  searchTab: 'direct' | 'agent'
   /**
-   * Agent-search tracking (P1.4): `anchorIndex` is the chat-block count at
-   * submit time, so the pane can slice off this run's tool rows and the final
-   * paper-list block even while other turns scroll by.
+   * Direct-search query and scope handed to the Agent research stage; its
+   * "new research" state starts pre-filled from it.
    */
-  agentSearch: { query: string; anchorIndex: number; startedAt: string } | null
+  researchDraft: PaperResearchDraft | null
 }
 
 /**
@@ -137,8 +141,7 @@ const emptyDiscover = (): PaperDiscoverState => ({
   searchResult: null,
   searchLoading: false,
   searchError: null,
-  searchTab: 'direct',
-  agentSearch: null
+  researchDraft: null
 })
 
 export const usePaperModeStore = create<PaperModeState>((set) => ({

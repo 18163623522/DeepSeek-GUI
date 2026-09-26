@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, type ReactElement } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   FolderOpen,
@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { AttachmentReference, RuntimeConnectionStatus, ChatBlock } from '../../agent/types'
-import { getProvider } from '../../agent/registry'
 import type { CoreRuntimeSkillJson } from '../../agent/kun-contract'
 import type { QueuedUserMessage } from '../../store/chat-store-types'
 import { useChatStore } from '../../store/chat-store'
@@ -23,7 +22,6 @@ import {
   clearUnreadCompletion,
   completionIsCurrentlyVisible
 } from '../../store/unread-completions'
-import { threadSnapshotLooksRunning } from '../../store/chat-store-runtime-helpers'
 import type { ModelProviderModelGroup } from '@shared/kun-gui-api'
 import {
   useWriteWorkspaceStore,
@@ -40,6 +38,7 @@ import { WritePaperAssistantActions } from './WritePaperAssistantActions'
 import { WritePresentationViewChip } from './WritePresentationViewChip'
 import { WriteResourceConversationHistoryPopover } from './WriteResourceConversationHistoryPopover'
 import { useWriteResourceConversationHistory } from './useWriteResourceConversationHistory'
+import { useChildThreadViewer } from './useChildThreadViewer'
 
 type Props = {
   input: string
@@ -179,12 +178,16 @@ export function WriteAssistantPanel({
     : t('writeNoFileOpen')
   const activeFileName = activeFilePath ? writeBasenameFromPath(activeFilePath) : activeFileLabel
   const presentationView = useWriteWorkspaceStore(selectFocusedPresentationView)
-  const [childThreadId, setChildThreadId] = useState<string | null>(null)
-  const [childBlocks, setChildBlocks] = useState<ChatBlock[]>([])
-  const [childStatus, setChildStatus] = useState<string | undefined>(undefined)
-  const [childLoading, setChildLoading] = useState(false)
-  const [childError, setChildError] = useState<string | null>(null)
-  const viewingChildThread = Boolean(childThreadId)
+  const {
+    childThreadId,
+    childBlocks,
+    childStatus,
+    childLoading,
+    childError,
+    viewingChildThread,
+    openChildThread,
+    closeChildThread
+  } = useChildThreadViewer(`${activeFilePath ?? ''}\u0000${activeThreadId ?? ''}\u0000${workspaceRoot}`)
   const conversationHistory = useWriteResourceConversationHistory(busy)
 
   useEffect(() => {
@@ -238,55 +241,6 @@ export function WriteAssistantPanel({
   const showSpreadsheetQuoteCandidate =
     !viewingChildThread && selectionIsSpreadsheet && selection.charCount > 0
 
-  useEffect(() => {
-    setChildThreadId(null)
-    setChildBlocks([])
-    setChildStatus(undefined)
-    setChildError(null)
-  }, [activeFilePath, activeThreadId, workspaceRoot])
-
-  useEffect(() => {
-    if (!childThreadId) {
-      setChildBlocks([])
-      setChildStatus(undefined)
-      setChildError(null)
-      setChildLoading(false)
-      return
-    }
-    let cancelled = false
-    let pollTimer: ReturnType<typeof globalThis.setTimeout> | null = null
-    const load = async (): Promise<void> => {
-      if (!cancelled) setChildLoading(true)
-      try {
-        const detail = await getProvider().getThreadDetail(childThreadId)
-        if (cancelled) return
-        setChildBlocks(detail.blocks)
-        setChildStatus(detail.threadStatus)
-        setChildError(null)
-        if (threadSnapshotLooksRunning(
-          detail.blocks,
-          detail.threadStatus,
-          detail.latestTurnStatus
-        )) {
-          pollTimer = globalThis.setTimeout(load, 1500)
-        }
-      } catch (error) {
-        if (cancelled) return
-        setChildError(error instanceof Error ? error.message : String(error))
-        // A queued child can be announced before its side thread is durable.
-        // Keep retrying while this local viewer remains open.
-        pollTimer = globalThis.setTimeout(load, 1500)
-      } finally {
-        if (!cancelled) setChildLoading(false)
-      }
-    }
-    void load()
-    return () => {
-      cancelled = true
-      if (pollTimer !== null) globalThis.clearTimeout(pollTimer)
-    }
-  }, [childThreadId])
-
   const setAssistantPrompt = (prompt: string): void => {
     setInput(input.trim() ? `${input.trim()}\n\n${prompt}` : prompt)
   }
@@ -302,22 +256,6 @@ export function WriteAssistantPanel({
   const quoteSpreadsheetSelection = (): void => {
     if (!workspaceRoot.trim()) return
     quoteCurrentSelection(workspaceRoot)
-  }
-
-  const openChildThread = (threadId: string): void => {
-    const targetId = threadId.trim()
-    if (!targetId || targetId === childThreadId) return
-    setChildBlocks([])
-    setChildStatus(undefined)
-    setChildError(null)
-    setChildThreadId(targetId)
-  }
-
-  const closeChildThread = (): void => {
-    setChildThreadId(null)
-    setChildBlocks([])
-    setChildStatus(undefined)
-    setChildError(null)
   }
 
   return (

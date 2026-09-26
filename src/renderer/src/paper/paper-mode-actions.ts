@@ -91,7 +91,8 @@ export function writeConversationResourcePath(
     activeFilePath,
     unitDirs: Object.keys(usePaperStore.getState().unitsByDir),
     entriesByDir: state.entriesByDir,
-    view: paperModeView(state)
+    view: paperModeView(state),
+    researchSessionId: state.paperResearch.sessionId
   }) ?? ''
 }
 

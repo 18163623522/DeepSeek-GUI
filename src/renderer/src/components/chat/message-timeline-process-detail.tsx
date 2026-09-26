@@ -18,6 +18,13 @@ import {
 } from './message-timeline-tools'
 import { InjectedMemoryMetaChip } from './injected-memory-meta-chip'
 import { KnowledgeEvidenceDetail, parseKnowledgeEvidence } from './KnowledgeEvidenceDetail'
+import {
+  PaperToolDetailView,
+  paperToolName,
+  paperToolProcessDetail,
+  summarizePaperToolBlock,
+  type PaperToolDetail
+} from './paper-tool-process'
 
 export function toolNameForBlock(block: ToolBlock): string {
   const rawSummary = block.summary?.trim() ?? ''
@@ -54,6 +61,7 @@ export type ProcessDetail =
   | { kind: 'background_shell' }
   | { kind: 'background_subagent' }
   | { kind: 'text'; text: string }
+  | { kind: 'paper'; paper: PaperToolDetail }
 
 export function summarizeProcessText(text: string, max = 96): string {
   const oneLine = text.replace(/\s+/g, ' ').trim()
@@ -255,6 +263,8 @@ export function summarizeToolBlock(
 ): string {
   const rawSummary = block.summary?.trim() ?? ''
   const toolName = toolNameForBlock(block)
+  const paperTool = paperToolName(toolName)
+  if (paperTool) return summarizePaperToolBlock(block, paperTool, t)
   const label = builtInToolLabel(toolName, t) || humanizeToolName(toolName) || formatToolTitle(block, t)
   const sourceText = [rawSummary, block.detail ?? ''].filter(Boolean).join('\n')
   const filePath = toolFilePath(block)
@@ -330,6 +340,9 @@ export function getProcessDetail(block: ChatBlock, summaryText?: string): Proces
     return text.trim() ? { kind: 'assistant', text } : { kind: 'none' }
   }
   if (block.kind === 'tool') {
+    const paperTool = paperToolName(toolNameForBlock(block))
+    const paper = paperTool ? paperToolProcessDetail(block, paperTool) : null
+    if (paper) return { kind: 'paper', paper }
     const detailText = block.detail?.trim() ?? ''
     if (!detailText) return { kind: 'none' }
     if (summaryText && normalizeProcessText(detailText) === normalizeProcessText(summaryText)) {
@@ -436,6 +449,9 @@ export function ProcessEntryDetail({
   }
   if (detail.kind === 'text') {
     return <p className="whitespace-pre-wrap text-[13.5px] leading-6 text-ds-muted">{detail.text}</p>
+  }
+  if (detail.kind === 'paper' && block.kind === 'tool') {
+    return <PaperToolDetailView block={block} detail={detail.paper} />
   }
   if (detail.kind === 'approval' && block.kind === 'approval') {
     return <MessageBubble block={block} nested allowThreadActions={allowThreadActions} />
