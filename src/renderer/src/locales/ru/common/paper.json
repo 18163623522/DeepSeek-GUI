@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "Обновить список статей",
   "writePaperRelatedWork": "Написать обзор работ",
   "writePaperSaveFailed": "Не удалось сохранить текущий документ. Устраните конфликт и повторите.",
-  "writePaperScholarKey": "API-ключ Semantic Scholar",
-  "writePaperScholarKeyDesc": "Повышает лимит запросов ссылок/цитирований.",
   "writePaperSearchPlaceholder": "Search papers…",
   "writePaperSection": "Статьи",
   "writePaperSelectAll": "Select all",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "Загрузка деталей…",
   "writePaperDetailFailed": "Не удалось загрузить дополнительные данные",
   "writePaperDetailCitationsByYear": "Цитирования по годам",
-  "writePaperDiscoverFeedNew": "новое"
+  "writePaperDiscoverFeedNew": "новое",
+  "writePaperSearchSettingsClearKey": "Очистить",
+  "writePaperSearchSettingsKeyCleared": "Будет удалён при сохранении"
 }

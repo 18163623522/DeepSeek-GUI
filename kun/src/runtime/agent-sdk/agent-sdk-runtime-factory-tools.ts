@@ -116,6 +116,7 @@ const SDK_ON_REQUEST_AUTO_ALLOWED_TOOLS = new Set([
   'TodoWrite'
 ])
 import { isPendingReceiptOutput } from '../../services/canvas-receipt-registry.js'
+import { stashSdkToolResultMeta } from './sdk-tool-result-meta.js'
 import type { AgentSdkRuntimeFactoryDeps } from './agent-sdk-runtime-factory-contracts.js'
 import { resolveTurnPlanContext } from './agent-sdk-runtime-factory-plan.js'
 import type { AgentSdkFactoryContext } from './agent-sdk-runtime-factory-context.js'
@@ -243,6 +244,9 @@ export function createAgentSdkToolRuntimeDeps(
           if (finalized) return finalized
           return { output: 'Renderer receipt timed out; the canvas was not verified.', isError: true }
         }
+        // The SDK stream later synthesizes the tool_result item; park the
+        // client sideband so the event mapper can attach it.
+        stashSdkToolResultMeta(threadId, sdkCallId, result.item.meta)
         return { output: result.item.output, isError: result.item.isError }
       } catch (err) {
         return { output: err instanceof Error ? err.message : String(err), isError: true }

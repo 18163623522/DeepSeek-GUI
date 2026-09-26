@@ -1,4 +1,5 @@
 import type { CapabilityRegistry } from '../../adapters/tool/capability-registry.js'
+import { stashSdkToolResultMeta } from '../agent-sdk/sdk-tool-result-meta.js'
 import type { AttachmentStore } from '../../attachments/attachment-store.js'
 import type {
   ApprovalPolicy,
@@ -580,6 +581,9 @@ export function createCursorSdkRuntime(
                 output: result.item.output,
                 isError: result.item.isError
               }
+              // The Cursor stream synthesizes the tool_result item later; park
+              // the client sideband for the event mapper (same as the SDK path).
+              stashSdkToolResultMeta(context.threadId, toolCallId?.trim(), result.item.meta)
               if (
                 toolName === 'graph_define_plan' &&
                 delegatedGraphPlanWasCommitted(toolResult)

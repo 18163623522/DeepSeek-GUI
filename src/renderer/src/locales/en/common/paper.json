@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "Refresh paper list",
   "writePaperRelatedWork": "Write related work",
   "writePaperSaveFailed": "Could not save the current document. Fix the conflict and try again.",
-  "writePaperScholarKey": "Semantic Scholar API key",
-  "writePaperScholarKeyDesc": "Raises the rate limit for reference/citation lookups.",
   "writePaperSearchPlaceholder": "Search papers…",
   "writePaperSection": "Papers",
   "writePaperSelectAll": "Select all",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "Fetching details…",
   "writePaperDetailFailed": "Could not load extra details",
   "writePaperDetailCitationsByYear": "Citations by year",
-  "writePaperDiscoverFeedNew": "new"
+  "writePaperDiscoverFeedNew": "new",
+  "writePaperSearchSettingsClearKey": "Clear",
+  "writePaperSearchSettingsKeyCleared": "Cleared on save"
 }

@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "論文リストを更新",
   "writePaperRelatedWork": "関連研究を書く",
   "writePaperSaveFailed": "現在のドキュメントを保存できませんでした。競合を解決してから再試行してください。",
-  "writePaperScholarKey": "Semantic Scholar API キー",
-  "writePaperScholarKeyDesc": "参考文献/被引用検索のレート制限を緩和します。",
   "writePaperSearchPlaceholder": "Search papers…",
   "writePaperSection": "論文",
   "writePaperSelectAll": "Select all",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "詳細を取得中…",
   "writePaperDetailFailed": "追加の詳細を取得できませんでした",
   "writePaperDetailCitationsByYear": "年別被引用数",
-  "writePaperDiscoverFeedNew": "新着"
+  "writePaperDiscoverFeedNew": "新着",
+  "writePaperSearchSettingsClearKey": "クリア",
+  "writePaperSearchSettingsKeyCleared": "保存時にクリア"
 }

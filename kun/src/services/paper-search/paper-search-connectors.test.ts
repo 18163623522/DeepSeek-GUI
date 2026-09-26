@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { parseOpenReviewSearch } from './paper-search-openreview.js'
+import { parseOpenReviewSearch, searchOpenReview } from './paper-search-openreview.js'
 import { parsePubmedEfetch, parsePubmedEsearchIds } from './paper-search-pubmed.js'
 import { parseHalSearch } from './paper-search-hal.js'
 import { parseZenodoSearch } from './paper-search-zenodo.js'
 import { parseCoreSearch } from './paper-search-core.js'
-import { parseDblpSearch } from './paper-search-dblp.js'
+import { parseDblpSearch, searchDblp } from './paper-search-dblp.js'
 import { containsCjk, jaccardSimilarity, titleTokens } from './paper-search-text.js'
 
 describe('new source parsers (P2.1)', () => {
@@ -212,5 +212,30 @@ describe('fuzzy title matching helpers (P2.4)', () => {
     expect(jaccardSimilarity(a, b)).toBe(1)
     const c = titleTokens('Attention Is Not All You Need')
     expect(jaccardSimilarity(a, c)).toBeLessThan(0.9)
+  })
+})
+
+describe('connector request shapes', () => {
+  it('asks OpenReview for forum notes only and splits hyphenated terms', async () => {
+    let requested = ''
+    await searchOpenReview(
+      { query: 'repository-level code agent', limit: 5 },
+      {
+        fetch: async (url) => {
+          requested = url
+          return new Response(JSON.stringify({ notes: [] }))
+        }
+      }
+    )
+    const params = new URL(requested).searchParams
+    expect(params.get('source')).toBe('forum')
+    expect(params.get('term')).toBe('repository level code agent')
+  })
+
+  it('reports the dblp bot-check page as a readable error', async () => {
+    await expect(searchDblp(
+      { query: 'code agent', limit: 5 },
+      { fetch: async () => new Response('<!doctype html><title>Making sure you are not a bot</title>') }
+    )).rejects.toThrow('blocked by the dblp bot check')
   })
 })

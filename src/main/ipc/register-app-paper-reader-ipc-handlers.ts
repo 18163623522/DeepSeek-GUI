@@ -341,9 +341,9 @@ export function registerAppPaperReaderIpcHandlers(
           return { ok: false, code: 'invalid-unit', message: 'paper.json is missing or invalid.' }
         }
         const settings = await store.load()
-        const scholar = normalizeWritePaperModeSettings(
+        const { scholar, search } = normalizeWritePaperModeSettings(
           (settings.write as { paperMode?: WritePaperModeSettingsPatchV1 } | undefined)?.paperMode
-        ).scholar
+        )
         const context = await fetchContext()
         return await resolvePaperReferences({
           unitDirAbs,
@@ -352,7 +352,7 @@ export function registerAppPaperReaderIpcHandlers(
           kind: request.kind,
           online: scholar.onlineReferences,
           fetchContext: context,
-          scholarApiKey: scholar.semanticScholarApiKey || undefined,
+          scholarApiKey: search.semanticScholarApiKey || undefined,
           crossrefMailto: scholar.crossrefMailto || undefined
         })
       } catch (error) {

@@ -84,6 +84,9 @@ export type WritePaperModeSettingsPatchV1 = Partial<
     embedding?: Partial<WritePaperModeDiscoverSettingsV1['embedding']>
   }
   scholar?: Partial<WritePaperModeScholarSettingsV1>
-  search?: Partial<WritePaperModeSearchSettingsV1>
+  search?: Partial<WritePaperModeSearchSettingsV1> & {
+    /** Explicitly clear stored keys (an empty key value means "unchanged"). */
+    clearCredentials?: Array<'semanticScholarApiKey' | 'coreApiKey'>
+  }
   reader?: Partial<WritePaperModeReaderSettingsV1>
 }

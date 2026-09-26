@@ -8,11 +8,11 @@ import type { PaperSearchCardHit } from './paper-search-types.js'
  * actually found; ids that do not resolve are kept but flagged
  * `verified: false`.
  *
- * The scope is intentionally the runtime process, not a single thread:
- * delegated literature subagents run in their own threads but their findings
- * must still validate when the parent submits the final report. Everything
- * is in-memory — a runtime restart simply means a fresh context, matching
- * the model's own conversation-memory lifecycle.
+ * One store per research conversation (see `PaperSeenScopes`): delegated
+ * literature subagents run in child threads but record into their root
+ * conversation's store, so their findings validate when the parent submits
+ * the final report. Everything is in-memory — a runtime restart simply means
+ * a fresh context, matching the model's own conversation-memory lifecycle.
  */
 
 const MAX_PAPERS = 600
@@ -103,4 +103,59 @@ export class PaperSeenStore {
     this.order.length = 0
     this.byAlias.clear()
   }
+}
+
+const MAX_SCOPES = 64
+
+/**
+ * Per-conversation seen stores keyed by the root thread id (a delegated
+ * child resolves to its parent chain's root), so `paper_report` only
+ * verifies papers found in the same research conversation. LRU-bounded.
+ */
+export class PaperSeenScopes {
+  private readonly scopes = new Map<string, PaperSeenStore>()
+
+  constructor(private readonly maxScopes = MAX_SCOPES) {}
+
+  scope(rootThreadId: string): PaperSeenStore {
+    const key = rootThreadId || 'default'
+    let store = this.scopes.get(key)
+    if (store) {
+      this.scopes.delete(key)
+    } else {
+      store = new PaperSeenStore()
+    }
+    this.scopes.set(key, store)
+    while (this.scopes.size > this.maxScopes) {
+      const oldest = this.scopes.keys().next()
+      if (oldest.done) break
+      this.scopes.delete(oldest.value)
+    }
+    return store
+  }
+
+  clear(): void {
+    this.scopes.clear()
+  }
+}
+
+const MAX_PARENT_HOPS = 6
+
+/** Walk `parentThreadId` links to the conversation root; lookup failures stop the walk. */
+export async function resolveRootThreadId(
+  threadId: string,
+  parentOf: (threadId: string) => Promise<string | undefined>
+): Promise<string> {
+  let current = threadId
+  for (let hop = 0; hop < MAX_PARENT_HOPS; hop += 1) {
+    let parent: string | undefined
+    try {
+      parent = await parentOf(current)
+    } catch {
+      break
+    }
+    if (!parent || parent === current) break
+    current = parent
+  }
+  return current
 }

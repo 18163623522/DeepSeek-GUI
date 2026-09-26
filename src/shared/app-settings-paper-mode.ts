@@ -137,8 +137,8 @@ export function normalizeWritePaperModeSettings(
       }
     },
     scholar: {
-      semanticScholarApiKey:
-        typeof scholar.semanticScholarApiKey === 'string' ? scholar.semanticScholarApiKey.trim() : '',
+      // Folded into `search.semanticScholarApiKey` (the single S2 key).
+      semanticScholarApiKey: '',
       crossrefMailto:
         typeof scholar.crossrefMailto === 'string' ? scholar.crossrefMailto.trim().slice(0, 200) : '',
       onlineReferences: scholar.onlineReferences !== false
@@ -146,7 +146,8 @@ export function normalizeWritePaperModeSettings(
     search: {
       enabledSources: normalizeSearchSources(search.enabledSources, defaults.search.enabledSources),
       semanticScholarApiKey:
-        typeof search.semanticScholarApiKey === 'string' ? search.semanticScholarApiKey.trim().slice(0, 512) : '',
+        (typeof search.semanticScholarApiKey === 'string' ? search.semanticScholarApiKey.trim() : '').slice(0, 512) ||
+        (typeof scholar.semanticScholarApiKey === 'string' ? scholar.semanticScholarApiKey.trim().slice(0, 512) : ''),
       coreApiKey:
         typeof search.coreApiKey === 'string' ? search.coreApiKey.trim().slice(0, 512) : '',
       openAlexMailto:

@@ -170,3 +170,25 @@ describe('fuzzy merge (P2.4)', () => {
     expect(sameYear).toHaveLength(1)
   })
 })
+
+describe('explicit retry of a degraded source', () => {
+  it('queries the source again when bypassDegraded is set', async () => {
+    const limiter = new PaperRateLimiter({ degradeThreshold: 1, sleep: async () => undefined })
+    limiter.recordOutcome('crossref', { status: 429 })
+    expect(limiter.isDegraded('crossref')).toBe(true)
+    let calls = 0
+    const fetchImpl = async (): Promise<Response> => {
+      calls += 1
+      return new Response(JSON.stringify({ message: { items: [{ DOI: '10.1234/x', title: ['Retry paper'] }] } }))
+    }
+    const skipped = await runPaperSearch({ query: 'x', sources: ['crossref'] }, { fetch: fetchImpl, rateLimiter: limiter })
+    expect(skipped.sources[0]?.degraded).toBe(true)
+    expect(calls).toBe(0)
+    const retried = await runPaperSearch(
+      { query: 'x', sources: ['crossref'] },
+      { fetch: fetchImpl, rateLimiter: limiter, bypassDegraded: true }
+    )
+    expect(calls).toBe(1)
+    expect(retried.hits[0]?.title).toBe('Retry paper')
+  })
+})

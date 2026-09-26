@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "刷新论文列表",
   "writePaperRelatedWork": "写相关工作",
   "writePaperSaveFailed": "当前文档保存失败，请先解决冲突后重试。",
-  "writePaperScholarKey": "Semantic Scholar API 密钥",
-  "writePaperScholarKeyDesc": "提高参考文献/被引查询的速率上限。",
   "writePaperSearchPlaceholder": "搜索论文…",
   "writePaperSection": "论文",
   "writePaperSelectAll": "全选",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "正在获取详情…",
   "writePaperDetailFailed": "无法加载更多详情",
   "writePaperDetailCitationsByYear": "逐年引用数",
-  "writePaperDiscoverFeedNew": "新"
+  "writePaperDiscoverFeedNew": "新",
+  "writePaperSearchSettingsClearKey": "清除",
+  "writePaperSearchSettingsKeyCleared": "保存后清除"
 }

@@ -30,6 +30,7 @@ import {
   makeToolCallItem,
   makeToolResultItem
 } from '../../domain/item.js'
+import { takeSdkToolResultMeta } from './sdk-tool-result-meta.js'
 import type {
   SdkApiMessage,
   SdkContentBlock,
@@ -451,6 +452,9 @@ export class SdkEventMapper {
       try { output = JSON.parse(output) } catch { /* Plain-text Kun result. */ }
     }
     this.toolNames.delete(block.tool_use_id)
+    const meta = rawToolName.startsWith('mcp__kun__')
+      ? takeSdkToolResultMeta(this.ctx.threadId, block.tool_use_id)
+      : undefined
     return {
       kind: 'tool_call_finished',
       threadId: this.ctx.threadId,
@@ -465,7 +469,8 @@ export class SdkEventMapper {
         toolKind: toolKindFor(toolName),
         output,
         isError: block.is_error === true,
-        status: block.is_error === true ? 'failed' : 'completed'
+        status: block.is_error === true ? 'failed' : 'completed',
+        ...(meta ? { meta } : {})
       })
     }
   }

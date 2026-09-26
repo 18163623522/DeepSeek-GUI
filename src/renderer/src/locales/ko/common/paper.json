@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "논문 목록 새로고침",
   "writePaperRelatedWork": "관련 연구 작성",
   "writePaperSaveFailed": "현재 문서를 저장할 수 없습니다. 충돌을 해결한 후 다시 시도하세요.",
-  "writePaperScholarKey": "Semantic Scholar API 키",
-  "writePaperScholarKeyDesc": "참고문헌/피인용 조회 속도 제한을 높입니다.",
   "writePaperSearchPlaceholder": "Search papers…",
   "writePaperSection": "논문",
   "writePaperSelectAll": "Select all",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "상세 정보 가져오는 중…",
   "writePaperDetailFailed": "추가 정보를 불러오지 못했습니다",
   "writePaperDetailCitationsByYear": "연도별 인용 수",
-  "writePaperDiscoverFeedNew": "새 항목"
+  "writePaperDiscoverFeedNew": "새 항목",
+  "writePaperSearchSettingsClearKey": "지우기",
+  "writePaperSearchSettingsKeyCleared": "저장 시 삭제"
 }

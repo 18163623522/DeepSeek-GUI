@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { paperViewOwnsKeyEvent } from './paper-view-keys'
 import {
   AlertCircle,
   BookOpenText,
@@ -210,6 +211,9 @@ export function PaperSearchResults({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (isEditableTarget(event.target) || !hits.length) return
+      // The results sit in a document listener; only react while this view
+      // owns the keyboard, never when a PDF or chat pane next to it does.
+      if (!paperViewOwnsKeyEvent(listRef.current, event)) return
       if (event.metaKey || event.ctrlKey || event.altKey) return
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()

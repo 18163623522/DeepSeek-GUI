@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "รีเฟรชรายการพาเพอร์",
   "writePaperRelatedWork": "เขียนงานที่เกี่ยวข้อง",
   "writePaperSaveFailed": "ไม่สามารถบันทึกเอกสารปัจจุบัน โปรดแก้ไขความขัดแย้งแล้วลองอีกครั้ง",
-  "writePaperScholarKey": "คีย์ API ของ Semantic Scholar",
-  "writePaperScholarKeyDesc": "เพิ่มขีดจำกัดอัตราการค้นหาอ้างอิง/ถูกอ้างอิง",
   "writePaperSearchPlaceholder": "Search papers…",
   "writePaperSection": "พาเพอร์",
   "writePaperSelectAll": "Select all",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "กำลังดึงรายละเอียด…",
   "writePaperDetailFailed": "ไม่สามารถโหลดรายละเอียดเพิ่มเติม",
   "writePaperDetailCitationsByYear": "การอ้างอิงรายปี",
-  "writePaperDiscoverFeedNew": "ใหม่"
+  "writePaperDiscoverFeedNew": "ใหม่",
+  "writePaperSearchSettingsClearKey": "ล้าง",
+  "writePaperSearchSettingsKeyCleared": "จะล้างเมื่อบันทึก"
 }

@@ -180,19 +180,6 @@ export function WritePaperReadingSettingsPanel({
         }
       />
       <SettingRow
-        title={t('writePaperScholarKey')}
-        description={t('writePaperScholarKeyDesc')}
-        control={
-          <input
-            className={`${textInputClass} w-56`}
-            value={mode.scholar.semanticScholarApiKey}
-            placeholder={t('writePaperOptional')}
-            spellCheck={false}
-            onChange={(e) => updateMode({ scholar: { semanticScholarApiKey: e.target.value } })}
-          />
-        }
-      />
-      <SettingRow
         title={t('writePaperCrossrefMailto')}
         description={t('writePaperCrossrefMailtoDesc')}
         control={
@@ -312,8 +299,9 @@ function PaperSearchSettingsCard({
     running: false
   })
 
-  const updateSearch = (search: Partial<WritePaperModeSearchSettingsV1>): void =>
-    update({ search })
+  type SearchPatch = NonNullable<WritePaperModeSettingsPatchV1['search']>
+  const updateSearch = (search: SearchPatch): void => update({ search })
+  const clears = (mode as SearchPatch).clearCredentials ?? []
 
   const toggleSource = (source: PaperSearchSource): void => {
     const next = mode.enabledSources.includes(source)
@@ -391,16 +379,12 @@ function PaperSearchSettingsCard({
         title={t('writePaperSearchSettingsScholarKey')}
         description={t('writePaperSearchSettingsScholarKeyDesc')}
         control={
-          <input
-            className={`${textInputClass} w-56`}
-            type="password"
-            autoComplete="off"
+          <SearchKeyInput
+            field="semanticScholarApiKey"
             value={mode.semanticScholarApiKey}
-            placeholder={
-              mode.semanticScholarApiKeyConfigured ? '••••••••••••' : t('writePaperOptional')
-            }
-            spellCheck={false}
-            onChange={(e) => updateSearch({ semanticScholarApiKey: e.target.value })}
+            configured={Boolean(mode.semanticScholarApiKeyConfigured)}
+            clears={clears}
+            update={updateSearch}
           />
         }
       />
@@ -408,14 +392,12 @@ function PaperSearchSettingsCard({
         title={t('writePaperSearchSettingsCoreKey')}
         description={t('writePaperSearchSettingsCoreKeyDesc')}
         control={
-          <input
-            className={`${textInputClass} w-56`}
-            type="password"
-            autoComplete="off"
+          <SearchKeyInput
+            field="coreApiKey"
             value={mode.coreApiKey}
-            placeholder={mode.coreApiKeyConfigured ? '••••••••••••' : t('writePaperOptional')}
-            spellCheck={false}
-            onChange={(e) => updateSearch({ coreApiKey: e.target.value })}
+            configured={Boolean(mode.coreApiKeyConfigured)}
+            clears={clears}
+            update={updateSearch}
           />
         }
       />
@@ -481,5 +463,54 @@ function PaperSearchSettingsCard({
         }
       />
     </SettingsCard>
+  )
+}
+
+type SearchKeyField = 'semanticScholarApiKey' | 'coreApiKey'
+
+/**
+ * Write-only API key field: the stored key never reaches the renderer, so a
+ * configured key shows as a mask with an explicit clear action (an empty
+ * value alone means "unchanged" when settings are saved).
+ */
+function SearchKeyInput({
+  field,
+  value,
+  configured,
+  clears,
+  update
+}: {
+  field: SearchKeyField
+  value: string
+  configured: boolean
+  clears: SearchKeyField[]
+  update: (patch: NonNullable<WritePaperModeSettingsPatchV1['search']>) => void
+}): ReactElement {
+  const { t } = useTranslation('common')
+  const cleared = clears.includes(field)
+  const showMask = configured && !cleared
+  return (
+    <span className="flex items-center gap-1.5">
+      <input
+        className={`${textInputClass} w-56`}
+        type="password"
+        autoComplete="off"
+        value={value}
+        placeholder={showMask ? '••••••••••••' : t('writePaperOptional')}
+        spellCheck={false}
+        onChange={(e) => update({ [field]: e.target.value, clearCredentials: clears.filter((key) => key !== field) })}
+      />
+      {showMask && !value ? (
+        <button
+          type="button"
+          onClick={() => update({ [field]: '', clearCredentials: [...clears.filter((key) => key !== field), field] })}
+          className="h-7 shrink-0 rounded-md px-2 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+        >
+          {t('writePaperSearchSettingsClearKey')}
+        </button>
+      ) : cleared ? (
+        <span className="shrink-0 text-[11.5px] text-ds-faint">{t('writePaperSearchSettingsKeyCleared')}</span>
+      ) : null}
+    </span>
   )
 }

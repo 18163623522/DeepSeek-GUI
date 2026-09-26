@@ -283,6 +283,7 @@ export type PaperDiscoverApi = {
     limit?: number
     yearFrom?: number
     yearTo?: number
+    retry?: boolean
   }) => Promise<PaperSearchResult>
   /** Probe one source with a tiny query; used by the settings "Test connection" button. */
   paperTestSource: (payload: {

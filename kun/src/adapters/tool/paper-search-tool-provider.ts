@@ -17,9 +17,14 @@ import {
   type PaperSearchCredentials,
   type PaperSearchFetch,
   type PaperSearchResponse,
+  type PaperSearchSource,
   type PaperSourceHit
 } from '../../services/paper-search/paper-search.js'
-import { PaperSeenStore } from '../../services/paper-search/paper-search-seen-store.js'
+import {
+  PaperSeenScopes,
+  resolveRootThreadId,
+  type PaperSeenStore
+} from '../../services/paper-search/paper-search-seen-store.js'
 import {
   fetchPaperCitationNeighbors,
   fetchPaperDetails
@@ -60,13 +65,19 @@ export type PaperSearchToolOptions = {
   /** Test seam / shared engine state; defaults are process-wide singletons. */
   cache?: PaperSearchCache<PaperSourceHit[]>
   rateLimiter?: PaperRateLimiter
+  /** Test seam: one fixed store for every conversation. */
   seen?: PaperSeenStore
+  /**
+   * Parent link of a thread (delegated children point at their parent) so
+   * findings are recorded under the research conversation's root thread.
+   */
+  parentThreadId?: (threadId: string) => Promise<string | undefined>
 }
 
 type SharedPaperState = {
   cache: PaperSearchCache<PaperSourceHit[]>
   rateLimiter: PaperRateLimiter
-  seen: PaperSeenStore
+  seenScopes: PaperSeenScopes
 }
 
 let sharedState: SharedPaperState | undefined
@@ -75,7 +86,7 @@ function defaultSharedState(): SharedPaperState {
   sharedState ??= {
     cache: new PaperSearchCache<PaperSourceHit[]>(),
     rateLimiter: new PaperRateLimiter(),
-    seen: new PaperSeenStore()
+    seenScopes: new PaperSeenScopes()
   }
   return sharedState
 }
@@ -120,17 +131,23 @@ export function buildPaperSearchToolProvider(options: PaperSearchToolOptions): C
   const shared = defaultSharedState()
   const cache = options.cache ?? shared.cache
   const rateLimiter = options.rateLimiter ?? shared.rateLimiter
-  const seen = options.seen ?? shared.seen
+  // `paper_report` may only verify papers found in the same research
+  // conversation (root thread + its delegated children).
+  const seenFor = async (threadId: string | undefined): Promise<PaperSeenStore> => {
+    if (options.seen) return options.seen
+    const root = threadId && options.parentThreadId
+      ? await resolveRootThreadId(threadId, options.parentThreadId)
+      : threadId ?? ''
+    return shared.seenScopes.scope(root)
+  }
 
   const fetchFor = (): PaperSearchFetch | undefined => {
     const proxyUrl = options.proxyUrl()?.trim()
     return proxyUrl ? ((createProxyFetch(proxyUrl) as PaperSearchFetch | null) ?? undefined) : undefined
   }
 
-  // Session-wide seen store: delegated literature children run in their own
-  // thread, so findings are recorded process-wide for `paper_report`.
-  const remember = (cards: PaperSearchCardHit[]): void => {
-    seen.record(cards)
+  const remember = async (threadId: string | undefined, cards: PaperSearchCardHit[]): Promise<void> => {
+    ;(await seenFor(threadId)).record(cards)
   }
 
   const searchTool = LocalToolHost.defineTool({
@@ -172,16 +189,23 @@ export function buildPaperSearchToolProvider(options: PaperSearchToolOptions): C
     execute: async (args, context) => {
       const query = typeof args?.query === 'string' ? args.query.trim() : ''
       if (!query) return { output: 'paper_search failed: query is required.', isError: true }
-      const enabled = options.enabledSources?.()
-      const requested = Array.isArray(args?.sources)
-        ? args.sources.filter((s: unknown): s is string => typeof s === 'string') as never
-        : undefined
+      const known = (values: readonly unknown[]): PaperSearchSource[] =>
+        values.filter((value): value is PaperSearchSource =>
+          typeof value === 'string' && (PAPER_SEARCH_SOURCES as readonly string[]).includes(value)
+        )
+      const enabled = options.enabledSources ? known(options.enabledSources() ?? []) : []
+      const requested = Array.isArray(args?.sources) ? known(args.sources) : undefined
       const credentials = options.credentials?.()
-      const baseSources = enabled?.length
-        ? (requested ?? [...PAPER_SEARCH_SOURCES]).filter((s) => enabled.includes(s as never))
-        : requested
+      // Settings are an allow-list; an omitted `sources` arg still means the
+      // engine defaults (narrowed to what is enabled), not every enabled index.
+      let baseSources: PaperSearchSource[] | undefined = requested
+      if (enabled.length) {
+        const defaultsWithinEnabled = DEFAULT_PAPER_SEARCH_SOURCES.filter((s) => enabled.includes(s))
+        baseSources = (requested ?? (defaultsWithinEnabled.length ? defaultsWithinEnabled : enabled))
+          .filter((s) => enabled.includes(s))
+      }
       const sources = (baseSources ?? []).filter((s) => s !== 'core' || credentials?.coreApiKey)
-      if (enabled?.length && !sources.length) {
+      if (enabled.length && !sources.length) {
         return {
           output: `paper_search: none of the requested sources are enabled; enabled sources: ${enabled.join(', ')}.`,
           isError: true
@@ -205,7 +229,7 @@ export function buildPaperSearchToolProvider(options: PaperSearchToolOptions): C
         }
       )
       const meta = buildPaperSearchMeta(response)
-      remember(meta.papers)
+      await remember(context?.threadId, meta.papers)
       const allFailed = response.sources.length > 0 && response.sources.every((report) => report.error)
       return {
         output: formatPaperSearchForModel(response),
@@ -254,6 +278,7 @@ export function buildPaperSearchToolProvider(options: PaperSearchToolOptions): C
       if (!raw.length || raw.length > 30) {
         return { output: 'paper_report failed: provide 1-30 papers.', isError: true }
       }
+      const seen = await seenFor(context?.threadId)
       const hasContext = seen.hasAny()
       const entries: PaperListEntryMeta[] = []
       for (const item of raw.slice(0, 30)) {
@@ -337,7 +362,7 @@ export function buildPaperSearchToolProvider(options: PaperSearchToolOptions): C
           sources: [{ source: viaSource, count: result.hits.length, ms: Date.now() - started }]
         }
         const meta = buildPaperSearchMeta(response)
-        remember(meta.papers)
+        await remember(context?.threadId, meta.papers)
         const seedLine = result.seed ? `Seed: ${result.seed.title}\n` : ''
         return {
           output: `${seedLine}${formatPaperSearchForModel(response)}`,
@@ -387,8 +412,8 @@ export function buildPaperSearchToolProvider(options: PaperSearchToolOptions): C
         })
         const resolved = details.filter((entry) => entry.hit)
         const cards = resolved
-          .map((entry) => paperHitToCard({ ...entry.hit!, key: '', sources: ['semantic_scholar'], score: 0 }))
-        remember(cards)
+          .map((entry) => paperHitToCard({ ...entry.hit!, key: '', sources: [entry.via ?? 'semantic_scholar'], score: 0 }))
+        await remember(context?.threadId, cards)
         const lines: string[] = []
         details.forEach((entry, i) => {
           if (!entry.hit) {

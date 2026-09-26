@@ -7,6 +7,7 @@ import {
   PAPER_SEARCH_SOURCE_LABELS,
   type PaperSearchSource
 } from '@shared/paper/paper-search'
+import { paperViewOwnsKeyEvent } from './paper-view-keys'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
 import {
   encodePaperSearchFeed,
@@ -73,6 +74,7 @@ export function PaperSearchView(): ReactElement {
   const [yearTo, setYearTo] = useState('')
   const [history, setHistory] = useState<PaperSearchHistoryEntry[]>(readSearchHistory)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const years = useMemo(
     () => ({ from: parseYear(yearFrom), to: parseYear(yearTo) }),
     [yearFrom, yearTo]
@@ -82,6 +84,7 @@ export function PaperSearchView(): ReactElement {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return
+      if (!paperViewOwnsKeyEvent(rootRef.current, event)) return
       const target = event.target
       if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"]')) {
         return
@@ -183,7 +186,7 @@ export function PaperSearchView(): ReactElement {
     if (!query || !current || typeof window.kunGui?.paperSearch !== 'function') return
     patchDiscover({ searchLoading: true })
     void window.kunGui
-      .paperSearch({ query, sources: [source], limit: 10, yearFrom: years.from, yearTo: years.to })
+      .paperSearch({ query, sources: [source], limit: 10, yearFrom: years.from, yearTo: years.to, retry: true })
       .then((result) => {
         const fresh = usePaperModeStore.getState().discover.searchResult
         if (!result.ok || !fresh) {
@@ -244,7 +247,7 @@ export function PaperSearchView(): ReactElement {
 
   const busy = discover.searchLoading
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+    <div ref={rootRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
       <div className="mx-auto w-full max-w-[1040px] px-6 pb-10 pt-8">
         <h1 className="text-[20px] font-semibold tracking-tight text-ds-ink">{t('writePaperSearchTitle')}</h1>
         <p className="mt-1 text-[12.5px] text-ds-muted">{t('writePaperSearchSubtitle')}</p>

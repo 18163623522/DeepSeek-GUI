@@ -1,4 +1,5 @@
 import type { SDKMessage, TokenUsage } from '@cursor/sdk'
+import { takeSdkToolResultMeta } from '../agent-sdk/sdk-tool-result-meta.js'
 import { DEFAULT_MODEL_STREAM_LIMITS } from '../../adapters/model/model-stream-resource-budget.js'
 import type { TurnItem } from '../../contracts/items.js'
 import {
@@ -471,6 +472,7 @@ export class CursorSdkEventMapper {
       })
     }
     const resultId = `item_cursor_result_${this.ctx.turnId}_${message.call_id}`
+    const resultMeta = takeSdkToolResultMeta(this.ctx.threadId, message.call_id)
     events.push({
       kind: 'tool_call_finished',
       threadId: this.ctx.threadId,
@@ -485,7 +487,8 @@ export class CursorSdkEventMapper {
         toolKind: state.kind,
         output: boundedOutput(message.result, this.limits.maxEventBytes),
         isError: message.status === 'error',
-        status: message.status === 'error' ? 'failed' : 'completed'
+        status: message.status === 'error' ? 'failed' : 'completed',
+        ...(resultMeta ? { meta: resultMeta } : {})
       })
     })
     return events

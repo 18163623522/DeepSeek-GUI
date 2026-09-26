@@ -224,8 +224,6 @@
   "writePaperRefreshUnits": "पेपर सूची ताज़ा करें",
   "writePaperRelatedWork": "संबंधित कार्य लिखें",
   "writePaperSaveFailed": "मौजूदा दस्तावेज़ सेव नहीं हो सका। टकराव ठीक करके दोबारा कोशिश करें।",
-  "writePaperScholarKey": "Semantic Scholar API कुंजी",
-  "writePaperScholarKeyDesc": "संदर्भ/उद्धरण खोज की दर सीमा बढ़ाता है।",
   "writePaperSearchPlaceholder": "Search papers…",
   "writePaperSection": "पेपर",
   "writePaperSelectAll": "Select all",
@@ -419,5 +417,7 @@
   "writePaperDetailLoading": "विवरण लाया जा रहा है…",
   "writePaperDetailFailed": "अतिरिक्त विवरण नहीं मिल सका",
   "writePaperDetailCitationsByYear": "वर्षवार उद्धरण",
-  "writePaperDiscoverFeedNew": "नया"
+  "writePaperDiscoverFeedNew": "नया",
+  "writePaperSearchSettingsClearKey": "साफ़ करें",
+  "writePaperSearchSettingsKeyCleared": "सहेजने पर साफ़"
 }
