@@ -1,6 +1,12 @@
 # 论文模式：Agent 检索会话化 UI 重设计与实现计划
 
-> 状态：设计 + 实现计划（2026-09-26）。前置：`docs/work-paper-search-plan.zh-CN.md` 的 P1-P5 已合入 develop（`cad7d1adb`）。
+> 状态：已实现（2026-09-26，分支 `codex/paper-research-stage`）。前置：`docs/work-paper-search-plan.zh-CN.md` 的 P1-P5 已合入 develop（`cad7d1adb`）。
+>
+> 与本计划的差异：
+> - 舞台没有直接复用 `WriteAssistantPanel`，而是由 `PaperResearchStage` 组合时间线与标准输入框，props 通过 `WriteAssistantStageContext` 与右侧助手共用同一份。
+> - 研究状态（Agent 标签、当前会话 ID）放在 write workspace store 的 `paperResearch`，而不是 paper-mode store，让 `paperModeView` 保持为 write store 上的纯选择器。
+> - 窄窗口下（< 900px 隐藏会话栏，< 1100px 隐藏论文池）暂未提供下拉/抽屉替代入口。
+> - “新增 N 篇”显示在工具卡片展开后的头部，而不是折叠摘要里（摘要保持为纯函数）。
 > 目标读者：实现这一轮改动的开发者。文中的文件路径均相对仓库根目录。
 
 ## 1. 现状问题
