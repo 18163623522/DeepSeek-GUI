@@ -268,6 +268,11 @@
   justify-content: flex-end;
 }
 
+.write-start-shell {
+  container-type: inline-size;
+  container-name: write-start;
+}
+
 .write-start-grid {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
@@ -289,18 +294,20 @@
   align-self: start;
 }
 
-@container write-workspace (min-width: 700px) {
+@container write-start (min-width: 560px) {
   .write-start-primary-actions {
     justify-content: start;
     grid-template-columns: repeat(2, minmax(0, max-content));
   }
+}
 
+@container write-start (min-width: 720px) {
   .write-start-shortcuts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@container write-workspace (min-width: 1080px) {
+@container write-start (min-width: 1080px) {
   .write-start-grid {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
     align-items: center;
@@ -308,7 +315,7 @@
   }
 }
 
-@container write-workspace (min-width: 1280px) {
+@container write-start (min-width: 1280px) {
   .write-start-grid {
     grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
   }

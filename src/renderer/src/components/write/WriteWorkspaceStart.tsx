@@ -50,14 +50,14 @@ export function WriteWorkspaceStart({
     { label: t('writeStarterPresentation'), prompt: t('writeStarterPresentationPrompt'), icon: Presentation }
   ]
   return (
-    <div className="write-start-shell relative h-full min-h-[420px] overflow-auto rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,255,0.62))] px-5 py-5 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] sm:px-8 sm:py-8">
+    <div className="write-start-shell relative h-full min-h-[420px] overflow-auto rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,255,0.62))] p-[clamp(1.25rem,4.5cqw,2rem)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))]">
       <div className="write-start-grid mx-auto grid min-h-full w-full max-w-6xl gap-6">
         <section className="write-start-hero min-w-0 py-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-accent/15 bg-accent/10 px-3 py-1.5 text-[12px] font-semibold text-accent">
             <Sparkles className="h-3.5 w-3.5" strokeWidth={1.9} />
             <span>{t('writeStudio')}</span>
           </div>
-          <h2 className="write-start-heading mt-5 max-w-[12ch] text-[clamp(2.25rem,5vw,3.25rem)] font-semibold leading-[1.08] tracking-[0] text-ds-ink">
+          <h2 className="write-start-heading mt-5 max-w-[12ch] text-[clamp(1.75rem,6.5cqw,3.25rem)] font-semibold leading-[1.08] tracking-[0] text-ds-ink">
             {t(onboarding ? 'writeOnboardingTitle' : 'writeStartTitle')}
           </h2>
           <p className="write-start-copy mt-4 max-w-[56ch] text-[15px] leading-7 text-ds-muted">
