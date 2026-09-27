@@ -232,10 +232,19 @@ export type KunContextCompactionSettingsV1 = {
   defaultHardThreshold: number
   summaryMode: KunCompactionSummaryMode
   /**
-   * Experimental opt-in window-based context management. When enabled the
-   * model gets budget notices plus history/notes/new_context tools and
-   * pressure triggers a no-summary window transition instead of summary
-   * compaction. Missing or non-boolean values normalize to false.
+   * Parent switch for model-initiated context compression. When enabled the
+   * model receives 25/50/75 budget notices and a mid-turn compression tool.
+   * Missing or non-boolean values normalize to false, except a stored
+   * `windowModeEnabled: true` without this field migrates it on.
+   */
+  modelInitiatedCompactionEnabled: boolean
+  /**
+   * Experimental opt-in window-based context management. Effective only when
+   * `modelInitiatedCompactionEnabled` is also on. Then the model gets budget
+   * notices plus history/notes/new_context tools and pressure triggers a
+   * no-summary window transition instead of summary compaction. Missing or
+   * non-boolean values normalize to false. Turning the parent switch off also
+   * clears this flag.
    */
   windowModeEnabled: boolean
   summaryTimeoutMs: number

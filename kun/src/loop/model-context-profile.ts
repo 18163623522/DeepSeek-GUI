@@ -68,7 +68,14 @@ export type ContextCompactionConfig = {
   defaultHardThreshold?: number
   summaryMode?: 'heuristic' | 'model'
   /**
-   * Opt-in window-mode context strategy. When true, enabled turns advertise
+   * Parent switch for model-initiated compression. Alone it advertises
+   * compact_context plus budget notices; combined with windowModeEnabled it
+   * selects the window strategy. Missing means summary mode.
+   */
+  modelInitiatedCompactionEnabled?: boolean
+  /**
+   * Opt-in window-mode context strategy. Effective only when
+   * modelInitiatedCompactionEnabled is also true. Then enabled turns advertise
    * the history/notes/new_context tools and budget notices instead of the
    * summary compaction path. Missing means summary mode.
    */

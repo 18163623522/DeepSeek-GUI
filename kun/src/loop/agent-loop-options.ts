@@ -35,6 +35,7 @@ import type { InterruptedTurnResumeOptions } from './interrupted-turn-coordinato
 import type { TurnRunOutcome } from './turn-execution-types.js'
 import type { ContextWindowTurnModes } from '../services/context-window-turn-modes.js'
 import type { ContextWindowTransitionCoordinator } from '../services/context-window-transition-coordinator.js'
+import type { ContextCompactCoordinator } from '../services/context-compact-coordinator.js'
 import type { ContextWindowBudget } from './context-window-budget.js'
 import type { ContextWindowStateRestore } from '../services/context-window-state.js'
 
@@ -197,6 +198,8 @@ export type AgentLoopOptions = {
   contextWindowModes?: ContextWindowTurnModes
   /** Window transition coordinator backing the new_context tool. */
   contextWindowTransition?: ContextWindowTransitionCoordinator
+  /** Mid-turn summary compact tool; AgentLoop binds HistoryCompactionService. */
+  contextCompact?: ContextCompactCoordinator
   /** Per-window budget for threshold notices in window mode. */
   contextWindowBudget?: ContextWindowBudget
   /** Restart restore for window identity and covered threshold marks. */

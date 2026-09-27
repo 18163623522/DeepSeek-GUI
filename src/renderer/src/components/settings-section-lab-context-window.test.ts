@@ -2,43 +2,150 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
+import {
+  LaboratorySettingsSection,
+  baseCtx,
+  createRenderer,
+  defaultKunRuntimeSettings
+} from './settings-section-agents.test-support'
 import { ContextWindowSettingsPanel } from './settings-section-lab-context-window'
 
 const labels: Record<string, string> = {
-  labContextWindowTitle: 'Windowed context (experimental)',
-  labContextWindowDescription: 'Experimental windowed context.',
+  labContextCompressionTitle: 'Context compression',
+  labContextCompressionDescription: 'Experimental context compression.',
+  labModelInitiatedCompactionEnabled: 'Model-initiated context compression',
+  labModelInitiatedCompactionEnabledDesc: 'Gives the model budget notices and a compression tool.',
   labContextWindowEnabled: 'Enable windowed context',
-  labContextWindowEnabledDesc: 'Uses notes and on-demand history instead of summary compaction.'
+  labContextWindowEnabledDesc: 'Requires model-initiated context compression.'
 }
 const t = (key: string): string => labels[key] ?? key
 
 describe('ContextWindowSettingsPanel', () => {
-  it('defaults off and describes on-demand history retrieval', () => {
+  it('defaults off and describes model-initiated compression', () => {
     const markup = renderToStaticMarkup(createElement(ContextWindowSettingsPanel, {
       t,
+      modelInitiatedCompactionEnabled: false,
       windowModeEnabled: false,
-      onChange: () => undefined
+      onModelInitiatedChange: () => undefined,
+      onWindowModeChange: () => undefined
     }))
-    expect(markup).toContain('Windowed context')
-    expect(markup).toContain('Uses notes and on-demand history instead of summary compaction.')
+    expect(markup).toContain('Context compression')
+    expect(markup).toContain('Gives the model budget notices and a compression tool.')
+    expect(markup).toContain('Enable windowed context')
     expect(markup).toContain('aria-checked="false"')
+    expect(markup).toContain('aria-disabled="true"')
   })
 
-  it('toggles the existing contextCompaction window-mode flag', async () => {
-    const onChange = vi.fn()
+  it('disables the windowed-context toggle until the parent switch is on', async () => {
+    const onWindowModeChange = vi.fn()
     let renderer!: ReactTestRenderer
     await act(async () => {
       renderer = create(createElement(ContextWindowSettingsPanel, {
         t,
-        windowModeEnabled: false,
-        onChange
+        modelInitiatedCompactionEnabled: false,
+        windowModeEnabled: true,
+        onModelInitiatedChange: () => undefined,
+        onWindowModeChange
       }))
     })
-    const toggle = renderer.root.findByProps({ role: 'switch' })
-    await act(async () => {
-      toggle.props.onClick()
+    const windowToggle = renderer.root.findByProps({
+      role: 'switch',
+      'aria-label': 'Enable windowed context'
     })
-    expect(onChange).toHaveBeenCalledWith(true)
+    expect(windowToggle.props.disabled).toBe(true)
+    await act(async () => {
+      windowToggle.props.onClick()
+    })
+    expect(onWindowModeChange).not.toHaveBeenCalled()
     await act(async () => renderer.unmount())
+  })
+
+  it('toggles the parent switch independently of windowed context', async () => {
+    const onModelInitiatedChange = vi.fn()
+    let renderer!: ReactTestRenderer
+    await act(async () => {
+      renderer = create(createElement(ContextWindowSettingsPanel, {
+        t,
+        modelInitiatedCompactionEnabled: false,
+        windowModeEnabled: false,
+        onModelInitiatedChange,
+        onWindowModeChange: () => undefined
+      }))
+    })
+    const parentToggle = renderer.root.findByProps({
+      role: 'switch',
+      'aria-label': 'Model-initiated context compression'
+    })
+    await act(async () => {
+      parentToggle.props.onClick()
+    })
+    expect(onModelInitiatedChange).toHaveBeenCalledWith(true)
+    await act(async () => renderer.unmount())
+  })
+
+  it('toggles windowed context after the parent switch is on', async () => {
+    const onWindowModeChange = vi.fn()
+    let renderer!: ReactTestRenderer
+    await act(async () => {
+      renderer = create(createElement(ContextWindowSettingsPanel, {
+        t,
+        modelInitiatedCompactionEnabled: true,
+        windowModeEnabled: false,
+        onModelInitiatedChange: () => undefined,
+        onWindowModeChange
+      }))
+    })
+    const windowToggle = renderer.root.findByProps({
+      role: 'switch',
+      'aria-label': 'Enable windowed context'
+    })
+    expect(windowToggle.props.disabled).toBe(false)
+    await act(async () => {
+      windowToggle.props.onClick()
+    })
+    expect(onWindowModeChange).toHaveBeenCalledWith(true)
+    await act(async () => renderer.unmount())
+  })
+})
+
+describe('LaboratorySettingsSection context compression toggles', () => {
+  it('turns off windowed context together with the parent switch', () => {
+    const updateKun = vi.fn()
+    const defaults = defaultKunRuntimeSettings()
+    let renderer!: ReactTestRenderer
+    act(() => {
+      renderer = createRenderer(createElement(LaboratorySettingsSection, {
+        ctx: {
+          ...baseCtx(),
+          kun: {
+            ...defaults,
+            contextCompaction: {
+              ...defaults.contextCompaction,
+              modelInitiatedCompactionEnabled: true,
+              windowModeEnabled: true
+            }
+          },
+          updateKun
+        }
+      }))
+    })
+    const panel = renderer.root.findByProps({ id: 'laboratory-settings-panel-contextWindow' })
+    const parentToggle = panel.findByProps({
+      role: 'switch',
+      'aria-label': 'Model-initiated context compression'
+    })
+    const windowToggle = panel.findByProps({
+      role: 'switch',
+      'aria-label': 'Enable windowed context'
+    })
+    expect(windowToggle.props.disabled).toBe(false)
+    expect(windowToggle.props['aria-checked']).toBe(true)
+    act(() => parentToggle.props.onClick())
+    expect(updateKun).toHaveBeenCalledWith({
+      contextCompaction: expect.objectContaining({
+        modelInitiatedCompactionEnabled: false,
+        windowModeEnabled: false
+      })
+    })
   })
 })

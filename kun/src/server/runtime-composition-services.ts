@@ -18,6 +18,7 @@ import {
   buildMcpToolProviders,
   buildMemoryToolProviders,
   buildContextWindowToolProviders,
+  buildContextCompactToolProviders,
   KnowledgeBaseService,
   buildKnowledgeToolProvider,
   buildSkillToolProviders,
@@ -461,6 +462,10 @@ export async function createRuntimeServices(
       service: core.contextWindows,
       mode: contextWindowModeFor(core.contextWindowModes),
       newContextTransition: (context, args) => core.contextWindowTransition.asToolTransition(context.model?.id)(context, args)
+    }),
+    ...buildContextCompactToolProviders({
+      mode: contextWindowModeFor(core.contextWindowModes),
+      compact: core.contextCompact.asTool()
     }),
     buildKnowledgeToolProvider(knowledgeBaseService),
     ...buildSkillToolProviders(skillRuntime),

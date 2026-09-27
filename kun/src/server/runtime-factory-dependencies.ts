@@ -189,6 +189,8 @@ export { ContextWindowService } from '../services/context-window-service.js'
 export { ContextWindowNotes } from '../services/context-window-notes.js'
 export { FileContextWindowStore } from '../adapters/file/file-context-window-store.js'
 export { buildContextWindowToolProviders } from '../adapters/tool/context-window-tool-provider.js'
+export { buildContextCompactToolProviders } from '../adapters/tool/context-compact-tool-provider.js'
+export { ContextCompactCoordinator } from '../services/context-compact-coordinator.js'
 export { ContextWindowBudget } from '../loop/context-window-budget.js'
 export { ContextWindowTurnModes } from '../services/context-window-turn-modes.js'
 export {

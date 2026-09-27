@@ -13,6 +13,7 @@ import {
 import type { KunServeRuntimeOptions } from './runtime-factory-types.js'
 import type { ContextWindowModeSource } from '../adapters/tool/context-window-tool-provider.js'
 import type { ContextWindowMode } from '../contracts/context-windows.js'
+import { resolveContextWindowMode } from '../loop/context-window-mode.js'
 
 export function mergeRuntimeConfigApplyOptions(
   current: KunServeRuntimeOptions,
@@ -89,7 +90,7 @@ export function modelRequestCaptureDefaultEnabled(
 export function liveContextWindowMode(
   read: () => KunServeRuntimeOptions
 ): () => ContextWindowMode {
-  return () => read().contextCompaction?.windowModeEnabled === true ? 'windows' : 'summary'
+  return () => resolveContextWindowMode(read().contextCompaction)
 }
 
 /** Frozen per-call mode resolution for the window tool provider. */
