@@ -49,6 +49,13 @@ type Props = {
   onImportPaper?: () => void
   onPickWorkspace: () => void
 }
+
+/** True when keyboard focus is inside the given editor group's DOM. */
+function groupOwnsDomFocus(groupId: string): boolean {
+  if (typeof document === 'undefined') return false
+  const section = document.querySelector(`[data-editor-group-id="${CSS.escape(groupId)}"]`)
+  return Boolean(section && document.activeElement && section.contains(document.activeElement))
+}
 export function WriteEditorGroups({
   workspaceName,
   workspacePathLabel,
@@ -235,6 +242,7 @@ export function WriteEditorGroups({
               expandedGroupId && expandedGroupId !== group.id ? 'hidden' : 'flex'
             }`}
             data-focused={focused}
+            data-editor-group-id={group.id}
             style={{
               flex: expandedGroupId
                 ? (expandedGroupId === group.id ? '1 1 100%' : '0 0 0%')
@@ -317,11 +325,13 @@ export function WriteEditorGroups({
                   onRefreshWorkspace={() => void refreshWorkspace(workspaceRoot)}
                   onContentChange={(content) => { if (path) setDocumentContent(path, content) }}
                   onDocumentEdit={(edits) => {
-                    if (!focused) focusEditorGroup(group.id)
+                    if (!focused && groupOwnsDomFocus(group.id)) focusEditorGroup(group.id)
                     recordRecentEdits(edits)
                   }}
                   onSelectionChange={(selection) => {
-                    if (!focused) focusEditorGroup(group.id)
+                    // Editors report selection on load too; only a group the
+                    // user is actually in may take editor focus.
+                    if (!focused && groupOwnsDomFocus(group.id)) focusEditorGroup(group.id)
                     setSelection(selection)
                   }}
                   onPresentationViewChange={(view, source) => {

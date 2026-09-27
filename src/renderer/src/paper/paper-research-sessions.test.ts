@@ -63,3 +63,19 @@ describe('buildPaperResearchBrief', () => {
       .toBe('x\n\n[paper-research] depth=quick; sources=default; years=any')
   })
 })
+
+describe('library-level conversation', () => {
+  it('never resolves to a research session thread', async () => {
+    const { activeWriteThreadForWorkspace } = await import('../write/write-thread-registry')
+    let registry = emptyWriteThreadRegistry()
+    registry = markWriteThread(ROOT, 'library-thread', registry)
+    registry = markWriteThread(ROOT, 'research-thread', registry, researchResourcePath(ROOT, 'rs-aaa-000001'))
+    const threads = [
+      thread('library-thread', 'Library chat', '2026-09-01T00:00:00Z'),
+      thread('research-thread', 'Research', '2026-09-02T00:00:00Z')
+    ]
+    expect(activeWriteThreadForWorkspace(ROOT, threads, registry)?.id).toBe('library-thread')
+    expect(activeWriteThreadForWorkspace(ROOT, threads, registry, researchResourcePath(ROOT, 'rs-aaa-000001'))?.id)
+      .toBe('research-thread')
+  })
+})
