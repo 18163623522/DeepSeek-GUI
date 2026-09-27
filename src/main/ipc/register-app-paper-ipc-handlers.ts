@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import {
   paperCancelPayloadSchema,
   paperImportBatchPayloadSchema,
@@ -90,6 +90,27 @@ function paperErrorResult<T>(error: unknown, fallbackCode: 'io' | 'invalid-unit'
   return { ok: false, code: fallbackCode, message: error instanceof Error ? error.message : String(error) } as T
 }
 
+/**
+ * Import target: `parentDir` may be the papers dir or a folder below it. When
+ * it is inside the papers dir, dedupe spans the whole papers dir so a paper
+ * already filed in another folder is reused rather than imported twice.
+ */
+async function resolveImportTarget(
+  workspacePath: string,
+  parentDir: string | undefined,
+  papersDir: string
+): Promise<{ parentAbs: string; dedupeRootAbs?: string }> {
+  const papersRel = normalizeWritePapersDir(papersDir)
+  const parentAbs = await resolveTargetPathWithinWorkspace(
+    normalizeWritePapersDir(parentDir ?? papersRel),
+    workspacePath
+  )
+  const papersAbs = await resolveTargetPathWithinWorkspace(papersRel, workspacePath)
+  const inside = relative(papersAbs, parentAbs)
+  const nested = !inside.startsWith('..') && !isAbsolute(inside)
+  return { parentAbs, dedupeRootAbs: nested ? papersAbs : undefined }
+}
+
 export function registerAppPaperIpcHandlers(options: RegisterAppIpcHandlersOptions): void {
   const { getMainWindow, store, logError } = options
 
@@ -125,8 +146,11 @@ export function registerAppPaperIpcHandlers(options: RegisterAppIpcHandlersOptio
     try {
       const { paperReading, proxyUrl, searchCredentials } = await loadPaperSettings()
       const workspacePath = await canonicalPath(resolvePath(request.workspaceRoot))
-      const parentRel = normalizeWritePapersDir(request.parentDir ?? paperReading.papersDir)
-      const parentAbs = await resolveTargetPathWithinWorkspace(parentRel, workspacePath)
+      const { parentAbs, dedupeRootAbs } = await resolveImportTarget(
+        workspacePath,
+        request.parentDir,
+        paperReading.papersDir
+      )
       const localPdfPath = request.localPdfPath?.trim()
         ? resolvePath(request.localPdfPath)
         : undefined
@@ -138,7 +162,7 @@ export function registerAppPaperIpcHandlers(options: RegisterAppIpcHandlersOptio
         signal: job.signal,
         proxyUrl,
         onProgress: job.progress
-      }, { prefetched: request.meta, credentials: searchCredentials })
+      }, { prefetched: request.meta, credentials: searchCredentials, dedupeRootAbs })
       return {
         ok: true,
         unitDir: workspaceRelativeDir(workspacePath, outcome.unitDir),
@@ -164,8 +188,11 @@ export function registerAppPaperIpcHandlers(options: RegisterAppIpcHandlersOptio
     try {
       const { paperReading, proxyUrl, searchCredentials } = await loadPaperSettings()
       const workspacePath = await canonicalPath(resolvePath(request.workspaceRoot))
-      const parentRel = normalizeWritePapersDir(request.parentDir ?? paperReading.papersDir)
-      const parentAbs = await resolveTargetPathWithinWorkspace(parentRel, workspacePath)
+      const { parentAbs, dedupeRootAbs } = await resolveImportTarget(
+        workspacePath,
+        request.parentDir,
+        paperReading.papersDir
+      )
       const results: PaperImportBatchItemResult[] = []
       for (const [index, item] of request.items.entries()) {
         if (job.signal.aborted) {
@@ -182,7 +209,7 @@ export function registerAppPaperIpcHandlers(options: RegisterAppIpcHandlersOptio
           const outcome = await importPaperUnit(parentAbs, resolution, {
             signal: job.signal,
             proxyUrl
-          }, { prefetched: item.meta, credentials: searchCredentials })
+          }, { prefetched: item.meta, credentials: searchCredentials, dedupeRootAbs })
           results.push({
             input: item.input,
             ok: true,

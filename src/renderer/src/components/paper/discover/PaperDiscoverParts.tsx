@@ -2,8 +2,8 @@ import { useState, type ReactElement } from 'react'
 import { ChevronDown, ChevronUp, Loader2, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { PaperImportHintMeta } from '@shared/paper/paper-types'
-import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
+import { currentImportParentDir, useImportFolder } from '../../../paper/paper-import-target'
 import { newPaperRequestId, usePaperStore } from '../../../write/paper/paper-store'
 
 /** Normalized title key, mirroring `paperTitleKey` in the unit service. */
@@ -25,11 +25,11 @@ export function ImportButton({
   input: string
   meta?: PaperImportHintMeta
   workspaceRoot: string
-  t: (key: string) => string
+  t: (key: string, options?: Record<string, unknown>) => string
 }): ReactElement | null {
   const entries = usePaperModeStore((s) => s.entries)
   const refreshEntries = usePaperModeStore((s) => s.refreshEntries)
-  const paperReading = useWriteWorkspaceStore((s) => s.paperReading)
+  const folder = useImportFolder()
   const [busy, setBusy] = useState(false)
   const wantTitle = titleKey(meta?.title)
   const inLibrary = entries.some(
@@ -59,11 +59,20 @@ export function ImportButton({
         workspaceRoot,
         input,
         meta,
-        parentDir: paperReading.papersDir || 'papers',
+        parentDir: currentImportParentDir(),
         requestId: newPaperRequestId()
       })
-      if (result.ok) refreshEntries()
-      else usePaperStore.getState().setNotice({ tone: 'error', message: result.message })
+      if (result.ok) {
+        refreshEntries()
+        if (!result.reused) {
+          usePaperStore.getState().setNotice({
+            tone: 'success',
+            message: t('paperImportedToFolder', { folder: folder || t('paperImportFolderRoot') })
+          })
+        }
+      } else {
+        usePaperStore.getState().setNotice({ tone: 'error', message: result.message })
+      }
     } finally {
       setBusy(false)
     }
@@ -72,6 +81,7 @@ export function ImportButton({
     <button
       type="button"
       disabled={busy}
+      title={t('paperImportFolderTooltip', { folder: folder || t('paperImportFolderRoot') })}
       onClick={() => void run()}
       className="inline-flex shrink-0 items-center gap-1 rounded-full border border-ds-border px-2 py-1 text-[11.5px] font-medium text-ds-muted transition hover:border-accent-tint/40 hover:bg-accent-tint/[0.06] hover:text-accent disabled:opacity-60"
     >

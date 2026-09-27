@@ -54,6 +54,7 @@ async function runItem(
       emit({ status: 'importing', detail: 'BibTeX' })
       const result = await gui.paperImportBibtex({
         workspaceRoot: input.workspaceRoot,
+        parentDir: input.papersDir,
         bibtex: item.line.ref,
         downloadPdfs: input.downloadPdfs,
         requestId: item.requestId

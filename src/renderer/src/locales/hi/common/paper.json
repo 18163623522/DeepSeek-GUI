@@ -457,5 +457,17 @@
   "paperArxivTodaySummary": "{{count}} नए पेपर · {{categories}}",
   "paperFeedsEmptyTitle": "अपने पसंदीदा स्रोत फ़ॉलो करें",
   "paperFeedsEmptySub": "कोई भी RSS / Atom / JSON Feed URL जोड़ें या त्वरित खोज को सदस्यता के रूप में सहेजें; नए पेपर चिह्नित होंगे।",
-  "paperFeedsSuggested": "लोकप्रिय arXiv श्रेणियाँ"
+  "paperFeedsSuggested": "लोकप्रिय arXiv श्रेणियाँ",
+  "paperImportFolderTo": "यहाँ आयात करें",
+  "paperImportFolderRoot": "बिना फ़ोल्डर",
+  "paperImportFolderRootHint": "पेपर फ़ोल्डर का शीर्ष",
+  "paperImportFolderTitle": "फ़ोल्डर में आयात करें",
+  "paperImportFolderNew": "नया फ़ोल्डर",
+  "paperImportFolderNewPlaceholder": "फ़ोल्डर नाम, उप-फ़ोल्डर के लिए /",
+  "paperImportFolderCreate": "बनाएँ",
+  "paperImportFolderInvalid": "फ़ोल्डर नाम खाली नहीं हो सकता, \".\" से शुरू नहीं हो सकता, न ही < > : \" | ? * रख सकता है; अधिकतम 3 स्तर।",
+  "paperImportFolderTooltip": "नए पेपर \"{{folder}}\" में रखे जाएँगे",
+  "paperImportedToFolder": "\"{{folder}}\" में आयात किया गया",
+  "paperImportIntoFolder": "इस फ़ोल्डर में पेपर आयात करें",
+  "paperFolderEmpty": "खाली फ़ोल्डर"
 }

@@ -457,5 +457,17 @@
   "paperArxivTodaySummary": "本日の新着 {{count}} 件 · {{categories}}",
   "paperFeedsEmptyTitle": "気になる論文ソースを購読",
   "paperFeedsEmptySub": "RSS / Atom / JSON Feed の URL を追加するか、クイック検索を購読として保存できます。確認のたびに新着が表示されます。",
-  "paperFeedsSuggested": "よく使う arXiv カテゴリ"
+  "paperFeedsSuggested": "よく使う arXiv カテゴリ",
+  "paperImportFolderTo": "インポート先",
+  "paperImportFolderRoot": "未分類",
+  "paperImportFolderRootHint": "論文フォルダの最上位",
+  "paperImportFolderTitle": "フォルダにインポート",
+  "paperImportFolderNew": "新しいフォルダ",
+  "paperImportFolderNewPlaceholder": "フォルダ名（/ でサブフォルダ）",
+  "paperImportFolderCreate": "作成",
+  "paperImportFolderInvalid": "フォルダ名は空にできず、「.」で始めたり < > : \" | ? * を含めたりできません（最大 3 階層）。",
+  "paperImportFolderTooltip": "新しい論文は「{{folder}}」に保存されます",
+  "paperImportedToFolder": "「{{folder}}」にインポートしました",
+  "paperImportIntoFolder": "このフォルダに論文をインポート",
+  "paperFolderEmpty": "空のフォルダ"
 }

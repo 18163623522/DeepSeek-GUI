@@ -120,6 +120,36 @@ export async function listPaperUnits(parentAbs: string): Promise<ResolvedPaperUn
   return units
 }
 
+/** Unit internals never hold nested units or folders. */
+const UNIT_CHILD_DIRS = new Set(['figures', 'marks', 'source', 'assets'])
+const DEEP_LIST_MAX_DEPTH = 3
+
+/**
+ * Every unit under `rootAbs`, descending into folders (depth <= 3), so
+ * import dedupe covers the whole papers dir instead of one target folder.
+ */
+export async function listPaperUnitsDeep(rootAbs: string): Promise<ResolvedPaperUnit[]> {
+  const units: ResolvedPaperUnit[] = []
+  const walk = async (dirAbs: string, depth: number): Promise<void> => {
+    let entries
+    try {
+      entries = await readdir(dirAbs, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('.') || UNIT_CHILD_DIRS.has(entry.name)) continue
+      const dir = join(dirAbs, entry.name)
+      const meta = await readPaperUnitMeta(dir)
+      if (meta) units.push({ dir, meta })
+      else if (depth < DEEP_LIST_MAX_DEPTH) await walk(dir, depth + 1)
+    }
+  }
+  await walk(rootAbs, 0)
+  units.sort((a, b) => a.dir.localeCompare(b.dir))
+  return units
+}
+
 async function uniqueUnitDir(parentAbs: string, slug: string): Promise<string> {
   for (let n = 0; n < 100; n += 1) {
     const candidate = join(parentAbs, n === 0 ? slug : `${slug}-${n + 1}`)
@@ -186,20 +216,6 @@ export function resolvePaperImportSource(input: {
   return null
 }
 
-async function findExistingUnit(
-  parentAbs: string,
-  match: { arxivId?: string; coolId?: string }
-): Promise<ResolvedPaperUnit | null> {
-  const units = await listPaperUnits(parentAbs)
-  return (
-    units.find((unit) => {
-      if (match.arxivId && unit.meta.arxivId === match.arxivId) return true
-      if (match.coolId && unit.meta.coolPapers?.id === match.coolId) return true
-      return false
-    }) ?? null
-  )
-}
-
 export type PaperImportOutcome = {
   unitDir: string
   meta: PaperUnitMeta
@@ -215,6 +231,11 @@ export type PaperImportOptions = {
   prefetched?: PaperImportHintMeta
   /** Unpaywall/CORE/OpenAlex credentials for the OA-PDF chain. */
   credentials?: PaperSearchCredentials
+  /**
+   * Papers-dir root to dedupe against when importing into a folder below it,
+   * so a paper already filed elsewhere is reused instead of duplicated.
+   */
+  dedupeRootAbs?: string
 }
 
 /**
@@ -234,6 +255,7 @@ export async function importPaperUnit(
     credentials: options.credentials
   }
   await mkdir(parentAbs, { recursive: true })
+  const dedupe = { scopeAbs: options.dedupeRootAbs ?? parentAbs, deep: Boolean(options.dedupeRootAbs) }
 
   if (resolution.kind === 'local') {
     const sourcePath = resolution.localPdfPath
@@ -257,12 +279,13 @@ export async function importPaperUnit(
       fetched = work?.title ? work : null
     }
 
-    const existing = await findPaperUnitByIds(parentAbs, {
+    const existing = await findPaperUnitByIds(dedupe.scopeAbs, {
       arxivId: fetched?.arxivId ?? identified.arxivId,
       doi: fetched?.doi ?? identified.doi,
       title: fetched?.title ?? identified.titleGuess,
-      year: fetched?.year
-    })
+      year: fetched?.year,
+      originalPath: sourcePath
+    }, dedupe.deep)
     if (existing) {
       // Dedupe hit: when the existing unit is metadata-only, attach this PDF.
       if (!existing.meta.pdfFile) {
@@ -320,13 +343,13 @@ export async function importPaperUnit(
 
   if (resolution.kind === 'arxiv') {
     // 4-way dedupe (plan P3.3): search cards carry DOI/title alongside the id.
-    const existing = await findPaperUnitByIds(parentAbs, {
+    const existing = await findPaperUnitByIds(dedupe.scopeAbs, {
       arxivId: resolution.arxivId,
       coolId: resolution.coolId,
       doi: options.prefetched?.doi,
       title: options.prefetched?.title,
       year: options.prefetched?.year
-    })
+    }, dedupe.deep)
     if (existing) return { unitDir: existing.dir, meta: existing.meta, reused: true }
     progress('metadata', 'fetching arXiv metadata')
     const meta = await fetchArxivMeta(resolution.arxivId, fetch)
@@ -380,13 +403,13 @@ export async function importPaperUnit(
     if (!work?.title) {
       throw new PaperUnitError('not-found', `DOI ${resolution.doi} was not found.`)
     }
-    const existing = await findPaperUnitByIds(parentAbs, {
+    const existing = await findPaperUnitByIds(dedupe.scopeAbs, {
       arxivId: work.arxivId,
       doi: work.doi,
       coolId: prefetched?.coolId,
       title: work.title,
       year: work.year
-    })
+    }, dedupe.deep)
     if (existing) return { unitDir: existing.dir, meta: existing.meta, reused: true }
     if (work.arxivId) {
       return importPaperUnit(parentAbs, {
@@ -471,7 +494,7 @@ export async function importPaperUnit(
         sourceUrl: resolution.url
       }, fetch)
     }
-    const existing = await findPaperUnitByIds(parentAbs, { title: meta.title, year: meta.year })
+    const existing = await findPaperUnitByIds(dedupe.scopeAbs, { title: meta.title, year: meta.year }, dedupe.deep)
     if (existing) return { unitDir: existing.dir, meta: existing.meta, reused: true }
     const slugHint = `url-${meta.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48)}`
     const metaBase = {
@@ -516,7 +539,7 @@ export async function importPaperUnit(
   }
 
   // venue import via papers.cool citation_* metadata
-  const existing = await findExistingUnit(parentAbs, { coolId: resolution.coolId })
+  const existing = await findPaperUnitByIds(dedupe.scopeAbs, { coolId: resolution.coolId }, dedupe.deep)
   if (existing) return { unitDir: existing.dir, meta: existing.meta, reused: true }
   progress('metadata', 'fetching papers.cool metadata')
   const page = await fetchCoolPageMeta(
@@ -565,16 +588,18 @@ export function paperTitleKey(title: string): string {
 
 /**
  * Dedupe lookup for import flows (plan P3): arXiv id → DOI → papers.cool id →
- * normalized title+year, in that order.
+ * normalized title+year, in that order. `deep` also searches nested folders.
  */
 export async function findPaperUnitByIds(
   parentAbs: string,
-  match: { arxivId?: string; doi?: string; coolId?: string; title?: string; year?: string }
+  match: { arxivId?: string; doi?: string; coolId?: string; title?: string; year?: string; originalPath?: string },
+  deep = false
 ): Promise<ResolvedPaperUnit | null> {
-  const units = await listPaperUnits(parentAbs)
+  const units = deep ? await listPaperUnitsDeep(parentAbs) : await listPaperUnits(parentAbs)
   const wantTitle = match.title ? paperTitleKey(match.title) : ''
   return (
     units.find((unit) => {
+      if (match.originalPath && unit.meta.originalPath === match.originalPath) return true
       if (match.arxivId && unit.meta.arxivId === match.arxivId) return true
       if (match.doi && unit.meta.doi?.toLowerCase() === match.doi.toLowerCase()) return true
       if (match.coolId && unit.meta.coolPapers?.id === match.coolId) return true

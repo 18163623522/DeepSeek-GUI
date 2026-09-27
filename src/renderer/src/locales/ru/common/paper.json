@@ -457,5 +457,17 @@
   "paperArxivTodaySummary": "Новых статей: {{count}} · {{categories}}",
   "paperFeedsEmptyTitle": "Подпишитесь на нужные источники",
   "paperFeedsEmptySub": "Добавьте адрес RSS / Atom / JSON Feed или сохраните быстрый поиск как подписку — новые статьи будут отмечены.",
-  "paperFeedsSuggested": "Популярные разделы arXiv"
+  "paperFeedsSuggested": "Популярные разделы arXiv",
+  "paperImportFolderTo": "Импорт в",
+  "paperImportFolderRoot": "Без папки",
+  "paperImportFolderRootHint": "Корень папки статей",
+  "paperImportFolderTitle": "Импорт в папку",
+  "paperImportFolderNew": "Новая папка",
+  "paperImportFolderNewPlaceholder": "Имя папки, / для вложенных",
+  "paperImportFolderCreate": "Создать",
+  "paperImportFolderInvalid": "Имя папки не может быть пустым, начинаться с «.» или содержать < > : \" | ? *; до 3 уровней.",
+  "paperImportFolderTooltip": "Новые статьи сохраняются в «{{folder}}»",
+  "paperImportedToFolder": "Импортировано в «{{folder}}»",
+  "paperImportIntoFolder": "Импортировать статьи в эту папку",
+  "paperFolderEmpty": "Пустая папка"
 }

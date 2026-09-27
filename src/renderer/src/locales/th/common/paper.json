@@ -457,5 +457,17 @@
   "paperArxivTodaySummary": "บทความใหม่ {{count}} · {{categories}}",
   "paperFeedsEmptyTitle": "ติดตามแหล่งบทความที่สนใจ",
   "paperFeedsEmptySub": "เพิ่มลิงก์ RSS / Atom / JSON Feed หรือบันทึกการค้นหาด่วนเป็นการติดตาม บทความใหม่จะถูกทำเครื่องหมาย",
-  "paperFeedsSuggested": "หมวด arXiv ยอดนิยม"
+  "paperFeedsSuggested": "หมวด arXiv ยอดนิยม",
+  "paperImportFolderTo": "นำเข้าไปที่",
+  "paperImportFolderRoot": "ไม่ได้จัดโฟลเดอร์",
+  "paperImportFolderRootHint": "ระดับบนสุดของโฟลเดอร์บทความ",
+  "paperImportFolderTitle": "นำเข้าไปยังโฟลเดอร์",
+  "paperImportFolderNew": "โฟลเดอร์ใหม่",
+  "paperImportFolderNewPlaceholder": "ชื่อโฟลเดอร์ ใช้ / สำหรับโฟลเดอร์ย่อย",
+  "paperImportFolderCreate": "สร้าง",
+  "paperImportFolderInvalid": "ชื่อโฟลเดอร์ต้องไม่ว่าง ไม่ขึ้นต้นด้วย \".\" และไม่มี < > : \" | ? * (สูงสุด 3 ระดับ)",
+  "paperImportFolderTooltip": "บทความใหม่จะอยู่ใน \"{{folder}}\"",
+  "paperImportedToFolder": "นำเข้าไปที่ \"{{folder}}\" แล้ว",
+  "paperImportIntoFolder": "นำเข้าบทความไปยังโฟลเดอร์นี้",
+  "paperFolderEmpty": "โฟลเดอร์ว่าง"
 }

@@ -23,6 +23,7 @@ import {
 import { ExpandableAbstract, ImportButton } from './discover/PaperDiscoverParts'
 import { PaperVenuePane } from './discover/PaperVenuePane'
 import { PaperHeaderIconButton, PaperViewHeader } from './PaperViewHeader'
+import { PaperImportFolderPicker } from './import/PaperImportFolderPicker'
 
 export type PaperDiscoverSource = 'arxiv' | 'feeds' | 'venue'
 
@@ -77,9 +78,12 @@ export function PaperDiscoverView({ source }: { source?: PaperDiscoverSource }):
         title={t(`writePaperDiscoverTab_${effectiveSource}`)}
         meta={meta || undefined}
         actions={(
-          <PaperHeaderIconButton label={t('writePaperDiscoverRefresh')} onClick={() => setReloadKey((value) => value + 1)}>
-            <RotateCw className="h-3.5 w-3.5" strokeWidth={1.9} />
-          </PaperHeaderIconButton>
+          <>
+            <PaperImportFolderPicker />
+            <PaperHeaderIconButton label={t('writePaperDiscoverRefresh')} onClick={() => setReloadKey((value) => value + 1)}>
+              <RotateCw className="h-3.5 w-3.5" strokeWidth={1.9} />
+            </PaperHeaderIconButton>
+          </>
         )}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">

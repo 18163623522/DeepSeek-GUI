@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { CheckSquare, Loader2, Quote, Send, Square, SquareCheckBig } from 'lucide-react'
+import { PaperImportFolderPicker } from '../import/PaperImportFolderPicker'
 import type {
   PaperSearchHit,
   PaperSearchResponse,
@@ -195,6 +196,7 @@ export function PaperSearchSelectionBar({
         {t('writePaperSearchSelected', { count: selectedCount })}
       </span>
       <span className="flex-1" />
+      <PaperImportFolderPicker />
       <button
         type="button"
         onClick={onImport}

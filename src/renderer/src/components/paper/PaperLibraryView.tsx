@@ -40,6 +40,7 @@ import type {
   PaperLibrarySortKey,
   PaperUnitReadingActivity
 } from '@shared/paper/paper-library-types'
+import { currentImportFolder, currentImportParentDir } from '../../paper/paper-import-target'
 
 function statusLabelKey(status: string | undefined): string {
   switch (status ?? 'unread') {
@@ -293,7 +294,8 @@ export function PaperLibraryView({
           workspaceRoot,
           input: '',
           localPdfPath,
-          parentDir: paperReading.papersDir || 'papers',
+          // Dropping while a folder filter is active files the PDFs there.
+          parentDir: currentImportParentDir(filter.group || currentImportFolder()),
           requestId: newPaperRequestId()
         })
         if (result.ok) imported += 1

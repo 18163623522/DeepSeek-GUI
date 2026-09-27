@@ -17,6 +17,7 @@ import {
 import { PaperSearchTabs } from './PaperSearchScope'
 import { PaperQuickSearchBar } from './PaperQuickSearchBar'
 import { PaperHeaderIconButton, PaperViewHeader } from '../PaperViewHeader'
+import { PaperImportFolderPicker } from '../import/PaperImportFolderPicker'
 import { PaperResearchScopeChips, type PaperResearchScope } from '../research/PaperResearchScopeChips'
 import { PaperResearchView } from '../research/PaperResearchView'
 import { usePaperStore } from '../../../write/paper/paper-store'
@@ -217,6 +218,7 @@ export function PaperSearchView(): ReactElement {
   const scopeChips = <PaperResearchScopeChips scope={scope} onChange={updateScope} showDepth={false} />
   const headerActions = hasResult ? (
     <>
+      <PaperImportFolderPicker />
       <PaperHeaderIconButton label={t('writePaperSearchSubscribe')} onClick={subscribeSearch}>
         <BellPlus className="h-4 w-4" strokeWidth={1.8} />
       </PaperHeaderIconButton>

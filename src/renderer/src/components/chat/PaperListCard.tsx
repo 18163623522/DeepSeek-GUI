@@ -19,9 +19,10 @@ import { paperCardImportInput, paperCardImportMeta, paperCardUrl } from '../../a
 import type { PaperUnitMetaV2 } from '@shared/paper/paper-meta-v2'
 import { generatePaperBibtex } from '@shared/paper/paper-bibtex'
 import { usePaperModeStore } from '../../paper/paper-mode-store'
-import { useWriteWorkspaceStore } from '../../write/write-workspace-store'
 import { newPaperRequestId, usePaperStore } from '../../write/paper/paper-store'
 import { ImportButton } from '../paper/discover/PaperDiscoverParts'
+import { PaperImportFolderPicker } from '../paper/import/PaperImportFolderPicker'
+import { currentImportParentDir } from '../../paper/paper-import-target'
 
 const PRIORITY_ORDER = { must: 0, should: 1, optional: 2 } as const
 
@@ -144,7 +145,6 @@ export function PaperListCard({
 
   const importSelected = async (): Promise<void> => {
     if (importing || !selectedEntries.length) return
-    const paperReading = useWriteWorkspaceStore.getState().paperReading
     setImporting(true)
     try {
       const items = selectedEntries.map((entry) => ({
@@ -155,7 +155,7 @@ export function PaperListCard({
         const result = await window.kunGui.paperImportBatch({
           workspaceRoot,
           items,
-          parentDir: paperReading.papersDir || 'papers',
+          parentDir: currentImportParentDir(),
           requestId: newPaperRequestId()
         })
         if (result.ok) {
@@ -260,6 +260,7 @@ export function PaperListCard({
           {t('writePaperReportSelectAll')}
         </button>
         <span className="flex-1" />
+        <PaperImportFolderPicker />
         <button
           type="button"
           onClick={() => void importSelected()}

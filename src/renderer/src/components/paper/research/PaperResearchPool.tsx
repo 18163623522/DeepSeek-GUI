@@ -10,6 +10,8 @@ import type { ResearchPool, ResearchPoolEntry } from '../../../paper/paper-resea
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
 import { newPaperRequestId, usePaperStore } from '../../../write/paper/paper-store'
 import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
+import { currentImportParentDir } from '../../../paper/paper-import-target'
+import { PaperImportFolderPicker } from '../import/PaperImportFolderPicker'
 
 type PoolTab = 'all' | 'recommended' | 'library'
 type PoolSort = 'relevance' | 'hits' | 'year' | 'citations'
@@ -129,7 +131,7 @@ export function PaperResearchPool({
       const result = await window.kunGui.paperImportBatch({
         workspaceRoot: writeState.workspaceRoot,
         items,
-        parentDir: writeState.paperReading.papersDir || 'papers',
+        parentDir: currentImportParentDir(),
         requestId: newPaperRequestId()
       })
       if (result.ok) {
@@ -270,8 +272,11 @@ export function PaperResearchPool({
       </ul>
 
       <div className="shrink-0 border-t border-ds-border-muted px-3 py-2">
-        <div className="mb-1.5 text-[11px] text-ds-faint">
-          {chosen.length ? t('paperResearchPoolSelected', { count: chosen.length }) : t('paperResearchPoolChildNote')}
+        <div className="mb-1.5 flex items-center gap-1">
+          <span className="min-w-0 flex-1 truncate text-[11px] text-ds-faint">
+            {chosen.length ? t('paperResearchPoolSelected', { count: chosen.length }) : t('paperResearchPoolChildNote')}
+          </span>
+          <PaperImportFolderPicker showPrefix={false} className="-mr-1" />
         </div>
         <div className="flex flex-wrap gap-1">
           <button

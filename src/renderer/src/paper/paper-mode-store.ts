@@ -85,6 +85,8 @@ export type PaperModeState = {
   counts: { total: number; unread: number; reading: number; read: number; missingPdf: number }
   tags: string[]
   groups: string[]
+  /** Import target folder per library root ('' = papers dir); see paper-import-target. */
+  importFolders: Readonly<Record<string, string>>
   importDialogOpen: boolean
   /** Bumped to re-run the library scan (imports, external edits). */
   entriesRefreshToken: number
@@ -114,6 +116,9 @@ export type PaperModeState = {
   setEntriesLoading: (loading: boolean) => void
   setEntriesError: (message: string | null) => void
   setImportDialogOpen: (open: boolean) => void
+  setImportFolder: (library: string, folder: string) => void
+  /** Optimistically list a folder created before the next library scan. */
+  addGroup: (group: string) => void
   refreshEntries: () => void
   patchDiscover: (patch: Partial<PaperDiscoverState>) => void
 }
@@ -154,6 +159,7 @@ export const usePaperModeStore = create<PaperModeState>((set) => ({
   counts: { total: 0, unread: 0, reading: 0, read: 0, missingPdf: 0 },
   tags: [],
   groups: [],
+  importFolders: {},
   importDialogOpen: false,
   entriesRefreshToken: 0,
   discover: emptyDiscover(),
@@ -184,6 +190,14 @@ export const usePaperModeStore = create<PaperModeState>((set) => ({
   setEntriesLoading: (entriesLoading) => set({ entriesLoading }),
   setEntriesError: (entriesError) => set({ entriesError, entriesLoading: false }),
   setImportDialogOpen: (importDialogOpen) => set({ importDialogOpen }),
+  setImportFolder: (library, folder) =>
+    set((state) => ({ importFolders: { ...state.importFolders, [library]: folder } })),
+  addGroup: (group) =>
+    set((state) =>
+      state.groups.includes(group)
+        ? {}
+        : { groups: [...state.groups, group].sort((a, b) => a.localeCompare(b)) }
+    ),
   refreshEntries: () => set((state) => ({ entriesRefreshToken: state.entriesRefreshToken + 1 })),
   patchDiscover: (patch) => set((state) => ({ discover: { ...state.discover, ...patch } }))
 }))

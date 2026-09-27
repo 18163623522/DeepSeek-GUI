@@ -99,6 +99,10 @@ export type PaperMoveToGroupResult =
   | { ok: true; unitDir: string; previousUnitDir: string }
   | { ok: false; code: 'invalid-unit' | 'invalid-group' | 'exists' | 'io'; message: string }
 
+export type PaperCreateGroupResult =
+  | { ok: true; group: string }
+  | { ok: false; code: 'invalid-group' | 'io'; message: string }
+
 export type PaperDownloadPdfResult =
   | { ok: true; meta: PaperUnitMetaV2 }
   | { ok: false; code: string; message: string }

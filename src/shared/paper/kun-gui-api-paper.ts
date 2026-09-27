@@ -21,6 +21,7 @@ import type {
   PaperLocalLibraryState,
   PaperBibtexImportResult,
   PaperMoveToGroupResult,
+  PaperCreateGroupResult,
   PaperTitleSearchResult,
   PaperDoiResolveResult,
   PaperUrlMetaResult,
@@ -128,6 +129,11 @@ export type PaperLibraryApi = {
     unitDir: string
     group: string
   }) => Promise<PaperMoveToGroupResult>
+  /** Create an (empty) `<papersDir>/<group>` folder; existing folders are fine. */
+  paperCreateGroup: (payload: {
+    workspaceRoot: string
+    group: string
+  }) => Promise<PaperCreateGroupResult>
   /** Fetch a missing main PDF from the unit's arXiv id or recorded pdfUrl. */
   paperDownloadPdf: (payload: {
     workspaceRoot: string
@@ -169,6 +175,7 @@ export type PaperLibraryApi = {
   /** Import a BibTeX file's entries as metadata-only units. */
   paperImportBibtex: (payload: {
     workspaceRoot: string
+    parentDir?: string
     bibtex: string
     /** Also fetch PDFs for entries that carry arXiv/DOI ids. */
     downloadPdfs: boolean

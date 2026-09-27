@@ -58,6 +58,14 @@ export const paperMoveToGroupPayloadSchema = z
   })
   .strict()
 
+export const paperCreateGroupPayloadSchema = z
+  .object({
+    workspaceRoot: trimmedString(MAX_PATH_LENGTH),
+    /** New folder path under the papers dir, e.g. `survey` or `nlp/agents`. */
+    group: z.string().trim().min(1).max(240)
+  })
+  .strict()
+
 export const paperTrashUnitPayloadSchema = z
   .object({
     workspaceRoot: trimmedString(MAX_PATH_LENGTH),
@@ -100,6 +108,7 @@ export const paperExportBibtexPayloadSchema = z
 export const paperImportBibtexPayloadSchema = z
   .object({
     workspaceRoot: trimmedString(MAX_PATH_LENGTH),
+    parentDir: trimmedString(MAX_PATH_LENGTH).optional(),
     bibtex: z.string().max(2_000_000),
     downloadPdfs: z.boolean(),
     requestId: trimmedString(128)

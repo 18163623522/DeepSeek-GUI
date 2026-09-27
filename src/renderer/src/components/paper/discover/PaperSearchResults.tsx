@@ -16,7 +16,7 @@ import type { PaperImportHintMeta } from '@shared/paper/paper-types'
 import type { PaperUnitMetaV2 } from '@shared/paper/paper-meta-v2'
 import { generatePaperBibtex } from '@shared/paper/paper-bibtex'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
-import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
+import { currentImportParentDir } from '../../../paper/paper-import-target'
 import { newPaperRequestId, usePaperStore } from '../../../write/paper/paper-store'
 import { useChatStore } from '../../../store/chat-store'
 import { ExpandableAbstract, ImportButton } from './PaperDiscoverParts'
@@ -162,13 +162,12 @@ export function PaperSearchResults({
         .map((hit) => ({ input: importInput(hit), meta: importMeta(hit) }))
         .filter((item): item is { input: string; meta: PaperImportHintMeta } => Boolean(item.input))
       if (!items.length || typeof window.kunGui?.paperImportBatch !== 'function') return
-      const paperReading = useWriteWorkspaceStore.getState().paperReading
       setImporting(true)
       try {
         const outcome = await window.kunGui.paperImportBatch({
           workspaceRoot,
           items,
-          parentDir: paperReading.papersDir || 'papers',
+          parentDir: currentImportParentDir(),
           requestId: newPaperRequestId()
         })
         if (outcome.ok) {

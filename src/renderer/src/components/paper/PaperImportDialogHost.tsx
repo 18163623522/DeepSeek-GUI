@@ -23,6 +23,7 @@ export function PaperImportDialogHost({
     <PaperImportDialog
       workspaceRoot={workspaceRoot}
       papersDir={paperReading.papersDir || 'papers'}
+      folderPicker
       onClose={() => setOpen(false)}
     />
   )
