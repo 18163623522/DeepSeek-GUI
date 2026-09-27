@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron'
-import { join, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { z } from 'zod'
 import {
   paperArxivTodayPayloadSchema,
@@ -341,9 +341,9 @@ export function registerAppPaperReaderIpcHandlers(
           return { ok: false, code: 'invalid-unit', message: 'paper.json is missing or invalid.' }
         }
         const settings = await store.load()
-        const scholar = normalizeWritePaperModeSettings(
+        const { scholar, search } = normalizeWritePaperModeSettings(
           (settings.write as { paperMode?: WritePaperModeSettingsPatchV1 } | undefined)?.paperMode
-        ).scholar
+        )
         const context = await fetchContext()
         return await resolvePaperReferences({
           unitDirAbs,
@@ -352,7 +352,7 @@ export function registerAppPaperReaderIpcHandlers(
           kind: request.kind,
           online: scholar.onlineReferences,
           fetchContext: context,
-          scholarApiKey: scholar.semanticScholarApiKey || undefined,
+          scholarApiKey: search.semanticScholarApiKey || undefined,
           crossrefMailto: scholar.crossrefMailto || undefined
         })
       } catch (error) {
@@ -393,7 +393,14 @@ export function registerAppPaperReaderIpcHandlers(
       try {
         const workspacePath = await canonicalPath(resolvePath(request.workspaceRoot))
         const papersDirAbs = await papersDirAbsFor(workspacePath)
-        const result = await importPaperBibtex(workspacePath, papersDirAbs, request.bibtex, job.signal)
+        const targetDirAbs = request.parentDir
+          ? await resolveTargetPathWithinWorkspace(request.parentDir, workspacePath)
+          : papersDirAbs
+        const inside = relative(papersDirAbs, targetDirAbs)
+        if (inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)) {
+          throw new PaperUnitError('invalid-unit', 'Import folder must be inside the papers directory.')
+        }
+        const result = await importPaperBibtex(workspacePath, papersDirAbs, request.bibtex, job.signal, targetDirAbs)
         finishPaperJob(request.requestId, 'done')
         return { ok: true, ...result }
       } catch (error) {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
+import { paperViewOwnsKeyEvent } from './paper-view-keys'
 import {
-  AlertCircle,
   BookOpenText,
   CheckSquare,
   FileText,
@@ -16,7 +16,7 @@ import type { PaperImportHintMeta } from '@shared/paper/paper-types'
 import type { PaperUnitMetaV2 } from '@shared/paper/paper-meta-v2'
 import { generatePaperBibtex } from '@shared/paper/paper-bibtex'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
-import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
+import { currentImportParentDir } from '../../../paper/paper-import-target'
 import { newPaperRequestId, usePaperStore } from '../../../write/paper/paper-store'
 import { useChatStore } from '../../../store/chat-store'
 import { ExpandableAbstract, ImportButton } from './PaperDiscoverParts'
@@ -162,13 +162,12 @@ export function PaperSearchResults({
         .map((hit) => ({ input: importInput(hit), meta: importMeta(hit) }))
         .filter((item): item is { input: string; meta: PaperImportHintMeta } => Boolean(item.input))
       if (!items.length || typeof window.kunGui?.paperImportBatch !== 'function') return
-      const paperReading = useWriteWorkspaceStore.getState().paperReading
       setImporting(true)
       try {
         const outcome = await window.kunGui.paperImportBatch({
           workspaceRoot,
           items,
-          parentDir: paperReading.papersDir || 'papers',
+          parentDir: currentImportParentDir(),
           requestId: newPaperRequestId()
         })
         if (outcome.ok) {
@@ -210,6 +209,9 @@ export function PaperSearchResults({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (isEditableTarget(event.target) || !hits.length) return
+      // The results sit in a document listener; only react while this view
+      // owns the keyboard, never when a PDF or chat pane next to it does.
+      if (!paperViewOwnsKeyEvent(listRef.current, event)) return
       if (event.metaKey || event.ctrlKey || event.altKey) return
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
@@ -257,29 +259,16 @@ export function PaperSearchResults({
             ? ` ${t('writePaperSearchResultFiltered', { count: result.hits.length })}`
             : ''}
         </span>
-        <span className="flex flex-wrap items-center gap-1">
-          {result.sources.map((report) => (
-            <button
-              key={report.source}
-              type="button"
-              title={
-                report.error
-                  ? `${report.error} — ${t('writePaperSearchSourceRetryHint')}`
-                  : `${(report.ms / 1000).toFixed(1)}s`
-              }
-              onClick={() => (report.error ? onRetrySource(report.source) : undefined)}
-              className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] tabular-nums transition ${
-                report.error
-                  ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900'
-                  : 'bg-ds-subtle text-ds-muted'
-              }`}
-            >
-              {report.error ? <AlertCircle className="h-3 w-3" strokeWidth={2} /> : null}
-              {t(`writePaperSearchSource_${report.source}`)}
-              <span className="text-ds-faint">{report.error ? t('writePaperSearchSourceFailed') : report.count}</span>
-            </button>
-          ))}
-        </span>
+        {hits.length && !selectedHits.length ? (
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+          >
+            <Square className="h-3.5 w-3.5" strokeWidth={1.8} />
+            {t('writePaperSearchSelectAll')}
+          </button>
+        ) : null}
         <div className="ml-auto flex h-7 items-center rounded-md border border-ds-border-muted bg-ds-subtle p-0.5">
           {SORTS.map((key) => (
             <button
@@ -318,7 +307,7 @@ export function PaperSearchResults({
         t={t}
       />
 
-      {hits.length ? (
+      {selectedHits.length ? (
         <PaperSearchSelectionBar
           total={hits.length}
           selectedCount={selectedHits.length}
@@ -422,8 +411,8 @@ function SearchHitRow({
       data-hit-index={index}
       onMouseEnter={onFocus}
       className={`rounded-lg border px-4 py-3 transition ${
-        focused ? 'border-accent/60 bg-accent-tint/[0.04]' : 'border-ds-border-muted bg-ds-card'
-      } ${detailOpen ? 'border-accent/50' : ''}`}
+        focused ? 'border-accent-tint/60 bg-accent-tint/[0.04]' : 'border-ds-border-muted bg-ds-card'
+      } ${detailOpen ? 'border-accent-tint/50' : ''}`}
     >
       <div className="flex items-start gap-3">
         <button

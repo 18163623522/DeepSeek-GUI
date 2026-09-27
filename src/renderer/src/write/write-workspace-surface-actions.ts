@@ -7,7 +7,7 @@ import type { WriteWorkSurface } from './write-surface'
 import { setWriteWorkSurfaceValue } from './write-surface'
 import { persistWriteEditorLayout } from './write-editor-layout'
 
-type WriteSurfaceActions = Pick<WriteWorkspaceState, 'setWorkSurface'>
+type WriteSurfaceActions = Pick<WriteWorkspaceState, 'setWorkSurface' | 'setPaperResearch'>
 
 /**
  * Switch the active Work surface. Order is fixed by plan D2: persist the
@@ -30,6 +30,12 @@ export function createWriteSurfaceActions({ set, get }: {
       }
       setWriteWorkSurfaceValue(surface)
       set({ workSurface: surface })
+    },
+    setPaperResearch: (patch) => {
+      const current = get().paperResearch
+      const next = { ...current, ...patch }
+      if (next.agentTab === current.agentTab && next.sessionId === current.sessionId) return
+      set({ paperResearch: next })
     }
   }
 }

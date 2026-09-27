@@ -52,11 +52,16 @@ export function parseOpenReviewSearch(body: unknown): PaperSourceHit[] {
 }
 
 export const searchOpenReview: PaperSourceConnector = async (q, { fetch, signal }) => {
+  // `source=forum` keeps submissions only — `all` also returns reviews and
+  // comments (no title), which crowded out every paper. The term matcher
+  // treats hyphenated words as one token, so split them.
+  const term = q.query.replace(/[-_/]+/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!term) return []
   const params = new URLSearchParams({
-    term: q.query,
+    term,
     limit: String(Math.min(q.limit, 25)),
     content: 'all',
-    source: 'all'
+    source: 'forum'
   })
   const response = await fetch(`https://api2.openreview.net/notes/search?${params.toString()}`, {
     headers: { accept: 'application/json' },

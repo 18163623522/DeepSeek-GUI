@@ -10,6 +10,7 @@ import { paperCitationMarkdown } from '../../../paper/paper-citation-copy'
 import { newPaperRequestId, usePaperStore } from '../../../write/paper/paper-store'
 import { PaperFiguresPane } from './PaperFiguresPane'
 import { PaperCitationGraph } from './PaperCitationGraph'
+import { currentImportParentDir } from '../../../paper/paper-import-target'
 
 type DrawerTab = 'outline' | 'figures' | 'annotations' | 'references' | 'citations'
 
@@ -347,6 +348,7 @@ function ReferencesPane({
       const result = await window.kunGui.paperImport({
         workspaceRoot,
         input,
+        parentDir: currentImportParentDir(),
         requestId: newPaperRequestId()
       })
       if (result.ok) usePaperModeStore.getState().refreshEntries()

@@ -26,6 +26,7 @@ export function makeWriteFileActionBaseState(): WriteWorkspaceState {
     paperReading: defaultWriteSettings().paperReading,
     paperMode: defaultWriteSettings().paperMode,
     workSurface: 'docs',
+    paperResearch: { agentTab: true, sessionId: null },
     imageGenReady: false, prototypeReady: false, settingsLoading: false, settingsError: null,
     ...initialState(),
     previewMode: 'rich', assistantOpen: true, assistantModel: 'auto', assistantProviderId: '',
@@ -92,6 +93,7 @@ export function makeWriteFileActionBaseState(): WriteWorkspaceState {
     removeQuotedSelection: () => undefined,
     clearQuotedSelections: () => undefined,
     setWorkSurface: () => undefined,
+    setPaperResearch: () => undefined,
     resetWorkspace: () => undefined
   }
 }

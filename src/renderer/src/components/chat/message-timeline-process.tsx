@@ -460,7 +460,7 @@ function ProcessStackRows({
         }
 
         return (
-          <div key={block.id} className="min-w-0">
+          <div key={block.id} className="min-w-0" data-block-id={block.id}>
             <div
               role={canToggle ? 'button' : undefined}
               tabIndex={canToggle ? 0 : undefined}
@@ -594,7 +594,7 @@ function ProcessEntryRow({
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" data-block-id={block.id}>
       <div
         role={canToggle ? 'button' : undefined}
         tabIndex={canToggle ? 0 : undefined}

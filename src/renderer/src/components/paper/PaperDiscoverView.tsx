@@ -1,14 +1,9 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronUp,
-  Compass,
   ExternalLink,
   Loader2,
   Newspaper,
   Plus,
-  RefreshCw,
   RotateCw,
   Rss,
   Trophy,
@@ -18,7 +13,6 @@ import { useTranslation } from 'react-i18next'
 import { useWriteWorkspaceStore } from '../../write/write-workspace-store'
 import { rendererRuntimeClient } from '../../agent/runtime-client'
 import { usePaperModeStore } from '../../paper/paper-mode-store'
-import { openPaperViewTab } from '../../paper/paper-view'
 import type { PaperArxivTodayItem, PaperFeedItem } from '@shared/paper/paper-library-types'
 import {
   decodePaperSearchFeed,
@@ -28,8 +22,24 @@ import {
 } from '../../paper/paper-search-prefs'
 import { ExpandableAbstract, ImportButton } from './discover/PaperDiscoverParts'
 import { PaperVenuePane } from './discover/PaperVenuePane'
+import { PaperHeaderIconButton, PaperViewHeader } from './PaperViewHeader'
+import { PaperImportFolderPicker } from './import/PaperImportFolderPicker'
 
 export type PaperDiscoverSource = 'arxiv' | 'feeds' | 'venue'
+
+const SUGGESTED_FEEDS = [
+  { title: 'arXiv cs.CL', url: 'https://rss.arxiv.org/rss/cs.CL' },
+  { title: 'arXiv cs.LG', url: 'https://rss.arxiv.org/rss/cs.LG' },
+  { title: 'arXiv cs.AI', url: 'https://rss.arxiv.org/rss/cs.AI' },
+  { title: 'arXiv cs.SE', url: 'https://rss.arxiv.org/rss/cs.SE' },
+  { title: 'arXiv cs.CV', url: 'https://rss.arxiv.org/rss/cs.CV' }
+]
+
+/** RFC-822 / ISO feed dates → YYYY-MM-DD for display. */
+function shortDate(raw: string): string {
+  const time = Date.parse(raw)
+  return Number.isNaN(time) ? raw : new Date(time).toISOString().slice(0, 10)
+}
 
 const SOURCE_ICONS: Record<PaperDiscoverSource, ReactElement> = {
   arxiv: <Newspaper className="h-4 w-4" strokeWidth={1.8} />,
@@ -38,9 +48,9 @@ const SOURCE_ICONS: Record<PaperDiscoverSource, ReactElement> = {
 }
 
 /**
- * Discover virtual tab (U4/U7): one browser-like surface per source —
- * arXiv today, feed subscriptions, or a papers.cool venue listing — with a
- * pseudo address bar (back → library tab, refresh, current source label).
+ * Discover virtual tab (U4/U7): one surface per source — arXiv today, feed
+ * subscriptions, or a papers.cool venue listing — under the shared paper
+ * view header (source, current listing, refresh).
  */
 export function PaperDiscoverView({ source }: { source?: PaperDiscoverSource }): ReactElement {
   const { t } = useTranslation('common')
@@ -53,50 +63,39 @@ export function PaperDiscoverView({ source }: { source?: PaperDiscoverSource }):
   const effectiveSource = source ?? 'arxiv'
   const [reloadKey, setReloadKey] = useState(0)
 
-  const addressLabel =
+  const arxivDate = usePaperModeStore((s) => s.discover.arxivDate)
+  const meta =
     effectiveSource === 'arxiv'
-      ? 'arxiv.org · new'
+      ? arxivDate
       : effectiveSource === 'feeds'
-        ? feedTitle || t('writePaperDiscoverTab_feeds')
-        : ['papers.cool', venue || 'venue', venueGroup].filter(Boolean).join(' · ')
+        ? feedTitle
+        : [venue, venueGroup].filter(Boolean).join(' · ')
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="flex items-center gap-1.5 border-b border-ds-border-muted px-3 py-2">
-        <button
-          type="button"
-          onClick={() => openPaperViewTab('library')}
-          title={t('writePaperDiscoverBack')}
-          aria-label={t('writePaperDiscoverBack')}
-          className="write-pdf-icon-button shrink-0"
-        >
-          <ChevronLeft className="h-4 w-4" strokeWidth={1.9} />
-        </button>
-        <button
-          type="button"
-          onClick={() => setReloadKey((value) => value + 1)}
-          title={t('writePaperDiscoverRefresh')}
-          aria-label={t('writePaperDiscoverRefresh')}
-          className="write-pdf-icon-button shrink-0"
-        >
-          <RotateCw className="h-3.5 w-3.5" strokeWidth={1.9} />
-        </button>
-        <div className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-full border border-ds-border-muted bg-ds-subtle px-3 dark:bg-white/[0.05]">
-          <span className="shrink-0 text-accent">{SOURCE_ICONS[effectiveSource]}</span>
-          <span className="min-w-0 flex-1 truncate text-[12px] text-ds-muted">
-            {addressLabel}
-          </span>
-          <Compass className="h-3.5 w-3.5 shrink-0 text-ds-faint" strokeWidth={1.8} />
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        {effectiveSource === 'arxiv' ? (
-          <ArxivTodayPane workspaceRoot={workspaceRoot} reloadKey={reloadKey} />
-        ) : effectiveSource === 'feeds' ? (
-          <FeedsPane workspaceRoot={workspaceRoot} reloadKey={reloadKey} />
-        ) : (
-          <PaperVenuePane workspaceRoot={workspaceRoot} reloadKey={reloadKey} />
+      <PaperViewHeader
+        icon={SOURCE_ICONS[effectiveSource]}
+        title={t(`writePaperDiscoverTab_${effectiveSource}`)}
+        meta={meta || undefined}
+        actions={(
+          <>
+            <PaperImportFolderPicker />
+            <PaperHeaderIconButton label={t('writePaperDiscoverRefresh')} onClick={() => setReloadKey((value) => value + 1)}>
+              <RotateCw className="h-3.5 w-3.5" strokeWidth={1.9} />
+            </PaperHeaderIconButton>
+          </>
         )}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-[960px] px-6 pb-10 pt-4">
+          {effectiveSource === 'arxiv' ? (
+            <ArxivTodayPane workspaceRoot={workspaceRoot} reloadKey={reloadKey} />
+          ) : effectiveSource === 'feeds' ? (
+            <FeedsPane workspaceRoot={workspaceRoot} reloadKey={reloadKey} />
+          ) : (
+            <PaperVenuePane workspaceRoot={workspaceRoot} reloadKey={reloadKey} />
+          )}
+        </div>
       </div>
     </div>
   )
@@ -149,36 +148,26 @@ function ArxivTodayPane({
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-[13px] font-medium text-ds-ink">
-          {t('writePaperDiscoverArxivToday')}
+      <div className="mb-3 flex items-center gap-2 text-[12px] text-ds-faint">
+        <span className="min-w-0 truncate">
+          {t('paperArxivTodaySummary', { count: discover.arxivItems.length, categories: categories.join(', ') })}
         </span>
-        {discover.arxivDate ? (
-          <span className="text-[11.5px] text-ds-faint">{discover.arxivDate}</span>
-        ) : null}
+        {discover.arxivLoading && discover.arxivItems.length ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : null}
         <div className="flex-1" />
-        <button
-          type="button"
-          onClick={() =>
-            patchDiscover({
-              arxivSort: discover.arxivSort === 'relevance' ? 'announcement' : 'relevance'
-            })
-          }
-          className="rounded-md border border-ds-border px-2 py-1 text-[11px] text-ds-muted transition hover:bg-ds-hover"
-        >
-          {discover.arxivSort === 'relevance'
-            ? t('writePaperDiscoverSortAnnouncement')
-            : t('writePaperDiscoverSortRelevance')}
-        </button>
-        <button
-          type="button"
-          onClick={() => load(true)}
-          title={t('writePaperDiscoverRefresh')}
-          aria-label={t('writePaperDiscoverRefresh')}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${discover.arxivLoading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex h-7 shrink-0 items-center rounded-md border border-ds-border-muted bg-ds-subtle p-0.5">
+          {(['relevance', 'announcement'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => patchDiscover({ arxivSort: value })}
+              className={`inline-flex h-6 items-center rounded px-2 text-[11.5px] transition ${
+                discover.arxivSort === value ? 'bg-ds-main font-medium text-ds-ink shadow-sm' : 'text-ds-muted hover:text-ds-ink'
+              }`}
+            >
+              {t(value === 'relevance' ? 'writePaperDiscoverSortRelevance' : 'writePaperDiscoverSortAnnouncement')}
+            </button>
+          ))}
+        </div>
       </div>
       {discover.arxivError ? (
         <p className="rounded-lg border border-red-200/70 bg-red-50/80 px-3 py-2 text-[12px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
@@ -214,48 +203,43 @@ function ArxivRow({
   t: (key: string) => string
 }): ReactElement {
   return (
-    <li className="rounded-xl border border-ds-border-muted bg-ds-card p-3.5 transition hover:border-ds-border hover:bg-ds-card">
-      <div className="flex items-start gap-2">
+    <li className="rounded-lg border border-ds-border-muted bg-ds-card px-4 py-3 transition hover:border-ds-border">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[13.5px] font-semibold leading-5 text-ds-ink">{item.title}</p>
-          <p className="mt-0.5 truncate text-[11.5px] text-accent-tint/80">
-            {item.authors.slice(0, 4).join(', ')}
-          </p>
-          <p className="mt-0.5 truncate text-[10.5px] text-ds-faint">
-            {[item.arxivId, item.publishedAt, ...item.categories].filter(Boolean).join(' · ')}
+          {item.authors.length ? (
+            <p className="mt-0.5 truncate text-[12px] text-ds-muted" title={item.authors.join(', ')}>
+              {item.authors.slice(0, 6).join(', ')}
+              {item.authors.length > 6 ? ` +${item.authors.length - 6}` : ''}
+            </p>
+          ) : null}
+          <p className="mt-0.5 truncate text-[11.5px] text-ds-faint">
+            {[item.arxivId, item.publishedAt, item.categories.join(' ')].filter(Boolean).join(' · ')}
           </p>
         </div>
         {item.relevance > 0 ? (
-          <span className="shrink-0 rounded-full bg-accent-tint/[0.08] px-1.5 py-px text-[10px] text-accent">
+          <span className="shrink-0 rounded bg-ds-subtle px-1.5 py-px text-[10.5px] tabular-nums text-ds-muted" title={t('writePaperDiscoverSortRelevance')}>
             {Math.round(item.relevance * 100)}%
           </span>
         ) : null}
+        <ImportButton input={item.arxivId} workspaceRoot={workspaceRoot} t={t} />
       </div>
       {item.abstract ? <ExpandableAbstract text={item.abstract} /> : null}
-      <div className="mt-2 flex items-center gap-1.5">
-        <a
-          className="inline-flex items-center gap-1 rounded-full border border-ds-border px-2 py-0.5 text-[10.5px] font-medium text-ds-muted transition hover:border-accent-tint/40 hover:text-accent"
-          href="#"
-          onClick={(event) => {
-            event.preventDefault()
-            void window.kunGui?.openExternal?.(`https://arxiv.org/abs/${item.arxivId}`)
-          }}
-        >
-          <ExternalLink className="h-3 w-3" />
-          arXiv
-        </a>
-        <a
-          className="inline-flex items-center gap-1 rounded-full border border-ds-border px-2 py-0.5 text-[10.5px] font-medium text-ds-muted transition hover:border-accent-tint/40 hover:text-accent"
-          href="#"
-          onClick={(event) => {
-            event.preventDefault()
-            void window.kunGui?.openExternal?.(`https://arxiv.org/pdf/${item.arxivId}`)
-          }}
-        >
-          PDF
-        </a>
-        <span className="flex-1" />
-        <ImportButton input={item.arxivId} workspaceRoot={workspaceRoot} t={t} />
+      <div className="mt-2 flex items-center justify-end gap-1">
+        {([['arXiv', `https://arxiv.org/abs/${item.arxivId}`], ['PDF', `https://arxiv.org/pdf/${item.arxivId}`]] as const).map(([label, url]) => (
+          <a
+            key={label}
+            href="#"
+            onClick={(event) => {
+              event.preventDefault()
+              void window.kunGui?.openExternal?.(url)
+            }}
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+          >
+            <ExternalLink className="h-3 w-3" />
+            {label}
+          </a>
+        ))}
       </div>
     </li>
   )
@@ -382,60 +366,93 @@ function FeedsPane({
   }, [reloadKey])
 
   const activeItems = discover.feedItems[discover.activeFeedId] ?? []
+  const addSuggested = (url: string, title: string): void => {
+    if (feeds.some((feed) => feed.url === url)) return
+    const id = `feed-${Date.now().toString(36)}`
+    patchFeeds([...feeds, { id, url, title }])
+    loadFeed(id, url)
+  }
+  const addField = (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <input
+        value={newFeedUrl}
+        onChange={(event) => setNewFeedUrl(event.target.value)}
+        onKeyDown={(event) => { if (event.key === 'Enter') addFeed() }}
+        placeholder={t('writePaperDiscoverAddFeed')}
+        spellCheck={false}
+        className="h-8 min-w-0 flex-1 rounded-lg border border-ds-border-muted bg-ds-main px-2.5 text-[12.5px] text-ds-ink outline-none placeholder:text-ds-faint focus:border-[var(--ds-accent)]"
+      />
+      <button
+        type="button"
+        onClick={addFeed}
+        disabled={!newFeedUrl.trim()}
+        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-[var(--ds-control)] px-2.5 text-[12px] font-medium text-[var(--ds-control-foreground)] transition hover:opacity-90 disabled:opacity-40"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        {t('writePaperDiscoverAddFeedButton')}
+      </button>
+    </div>
+  )
+
+  if (!feeds.length) {
+    return (
+      <div className="mx-auto flex max-w-[560px] flex-col items-center pt-[10vh] text-center">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-ds-border-muted bg-ds-subtle text-ds-muted">
+          <Rss className="h-5 w-5" strokeWidth={1.8} />
+        </span>
+        <h2 className="mt-4 text-[17px] font-medium text-ds-ink">{t('paperFeedsEmptyTitle')}</h2>
+        <p className="mt-1.5 text-[12.5px] leading-5 text-ds-muted">{t('paperFeedsEmptySub')}</p>
+        <div className="mt-5 w-full">{addField}</div>
+        <p className="mt-6 text-[11.5px] text-ds-faint">{t('paperFeedsSuggested')}</p>
+        <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+          {SUGGESTED_FEEDS.map((feed) => (
+            <button
+              key={feed.url}
+              type="button"
+              onClick={() => addSuggested(feed.url, feed.title)}
+              className="inline-flex items-center gap-1 rounded-full border border-ds-border-muted px-3 py-1 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+            >
+              <Plus className="h-3 w-3" />
+              {feed.title}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2">
-        <input
-          value={newFeedUrl}
-          onChange={(event) => setNewFeedUrl(event.target.value)}
-          onKeyDown={(event) => { if (event.key === 'Enter') addFeed() }}
-          placeholder={t('writePaperDiscoverAddFeed')}
-          spellCheck={false}
-          className="h-7 min-w-0 flex-1 rounded-lg border border-ds-border bg-ds-main px-2 text-[12px] text-ds-ink outline-none focus:border-accent-tint/40"
-        />
-        <button
-          type="button"
-          onClick={addFeed}
-          disabled={!newFeedUrl.trim()}
-          className="inline-flex h-7 items-center gap-1 rounded-lg bg-accent-tint/10 px-2 text-[12px] font-medium text-accent transition hover:bg-accent-tint/15 disabled:opacity-50"
-        >
-          <Plus className="h-3 w-3" />
-          {t('writePaperDiscoverAddFeedButton')}
-        </button>
-      </div>
-      {feeds.length ? (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {feeds.map((feed) => (
-            <span
-              key={feed.id}
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] ${
-                discover.activeFeedId === feed.id
-                  ? 'border-accent-tint/40 bg-accent-tint/10 text-accent'
-                  : 'border-ds-border text-ds-muted'
-              }`}
-            >
-              <button type="button" onClick={() => loadFeed(feed.id, feed.url)}>
-                {feed.title}
-              </button>
-              <button
-                type="button"
-                aria-label={t('writePaperDiscoverRemoveFeed')}
-                onClick={() => patchFeeds(feeds.filter((item) => item.id !== feed.id))}
-                className="text-ds-faint transition hover:text-ds-ink"
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          {feeds.map((feed) => {
+            const active = discover.activeFeedId === feed.id
+            return (
+              <span
+                key={feed.id}
+                className={`group inline-flex h-7 items-center gap-1 rounded-md pl-2.5 pr-1 text-[12px] transition ${
+                  active ? 'bg-[var(--ds-sidebar-row-active)] font-medium text-ds-ink' : 'text-ds-muted hover:bg-ds-hover hover:text-ds-ink'
+                }`}
               >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
+                <button type="button" onClick={() => loadFeed(feed.id, feed.url)} className="max-w-[220px] truncate">
+                  {feed.title}
+                </button>
+                <button
+                  type="button"
+                  aria-label={t('writePaperDiscoverRemoveFeed')}
+                  onClick={() => patchFeeds(feeds.filter((item) => item.id !== feed.id))}
+                  className="rounded p-0.5 text-ds-faint opacity-0 transition hover:text-ds-ink group-hover:opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )
+          })}
         </div>
-      ) : (
-        <p className="py-6 text-center text-[12.5px] text-ds-faint">
-          {t('writePaperDiscoverNoFeeds')}
-        </p>
-      )}
+        <div className="w-[320px] max-w-full">{addField}</div>
+      </div>
       {discover.feedError ? (
-        <p className="mb-2 rounded-lg border border-red-200/70 bg-red-50/80 px-3 py-2 text-[12px] text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+        <p className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           {discover.feedError}
         </p>
       ) : null}
@@ -444,30 +461,35 @@ function FeedsPane({
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : null}
-      <ul className="space-y-2.5">
+      <ul className="space-y-2">
         {activeItems.map((item: PaperFeedItem) => (
           <li
             key={item.url}
-            className="rounded-xl border border-ds-border-muted bg-ds-card p-3.5 transition hover:border-ds-border hover:bg-ds-card"
+            className="rounded-lg border border-ds-border-muted bg-ds-card px-4 py-3 transition hover:border-ds-border"
           >
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-[13.5px] font-semibold leading-5 text-ds-ink">
                   {item.isNew ? (
-                    <span className="mr-1.5 inline-block rounded bg-accent-tint/15 px-1 py-px align-middle text-[9.5px] font-medium text-accent">
+                    <span className="mr-1.5 inline-block rounded bg-accent-tint/15 px-1 py-px align-middle text-[10px] font-medium text-accent">
                       {t('writePaperDiscoverFeedNew')}
                     </span>
                   ) : null}
                   {item.title}
                 </p>
-                <p className="mt-0.5 text-[10.5px] text-ds-faint">{item.publishedAt ?? ''}</p>
+                {item.publishedAt ? (
+                  <p className="mt-0.5 text-[11.5px] text-ds-faint">{shortDate(item.publishedAt)}</p>
+                ) : null}
               </div>
+              {item.arxivId || item.doi ? (
+                <ImportButton input={item.arxivId ?? item.doi ?? ''} workspaceRoot={workspaceRoot} t={t} />
+              ) : null}
             </div>
             {item.summary ? <ExpandableAbstract text={item.summary} /> : null}
-            <div className="mt-2 flex items-center gap-1.5">
-              {item.url ? (
+            {item.url ? (
+              <div className="mt-2 flex justify-end">
                 <a
-                  className="inline-flex items-center gap-1 rounded-full border border-ds-border px-2 py-0.5 text-[10.5px] font-medium text-ds-muted transition hover:border-accent-tint/40 hover:text-accent"
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
                   href="#"
                   onClick={(event) => {
                     event.preventDefault()
@@ -477,16 +499,8 @@ function FeedsPane({
                   <ExternalLink className="h-3 w-3" />
                   {t('writePaperDiscoverOpenLink')}
                 </a>
-              ) : null}
-              <span className="flex-1" />
-              {item.arxivId || item.doi ? (
-                <ImportButton
-                  input={item.arxivId ?? item.doi ?? ''}
-                  workspaceRoot={workspaceRoot}
-                  t={t}
-                />
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>

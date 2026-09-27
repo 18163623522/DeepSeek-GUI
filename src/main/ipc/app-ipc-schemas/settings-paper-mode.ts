@@ -49,7 +49,8 @@ export const writePaperModePatchSchema = z.object({
     semanticScholarApiKey: z.string().max(512).optional(),
     coreApiKey: z.string().max(512).optional(),
     openAlexMailto: optionalTrimmedString(320),
-    unpaywallEmail: optionalTrimmedString(320)
+    unpaywallEmail: optionalTrimmedString(320),
+    clearCredentials: z.array(z.enum(['semanticScholarApiKey', 'coreApiKey'])).max(2).optional()
   }).strict().optional(),
   reader: z.object({
     paperTone: z.enum(['white', 'sepia', 'green', 'dark']).optional()

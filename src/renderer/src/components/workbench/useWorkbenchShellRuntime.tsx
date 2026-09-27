@@ -1,4 +1,7 @@
 import type { ReactElement } from 'react'
+import { useWriteWorkspaceStore } from '../../write/write-workspace-store'
+import { paperResearchStageActive } from '../../paper/paper-view'
+import type { WriteAssistantStageProps } from '../write/WriteAssistantStageContext'
 import { BUILTIN_RIGHT_PANEL_IDS } from '../../extensions/contribution-ids'
 import { extraRootsForWorkspace } from '../../lib/code-workspace-folder-lookup'
 import { normalizeWorkspaceRoot } from '../../lib/workspace-path'
@@ -22,6 +25,7 @@ export function useWorkbenchShellRuntime(context: Context): {
   planOverlay: ReactElement | null
   rightPanel: ReactElement | null
   rightPanelSharedProps: any
+  writeAssistantStageProps: WriteAssistantStageProps
   writeRuntimeBanner: ReactElement | null
   focusedCanvasWorkspace: ReactElement | null
 } {
@@ -176,7 +180,30 @@ export function useWorkbenchShellRuntime(context: Context): {
     onReplanChanged: (ids) => void replanChangedRequirements(ids),
     setRightPanelMode
   })
-  const rightPanelDockedVisible = rightPanelVisible && !planPanelInOverlay
+  // The paper Agent research stage hosts the Work assistant conversation in
+  // the center; the rail steps aside so only one composer is on screen.
+  const researchStageActive = useWriteWorkspaceStore(paperResearchStageActive)
+  const rightPanelDockedVisible = rightPanelVisible && !planPanelInOverlay &&
+    !(route === 'write' && researchStageActive)
+  const writeAssistantRailProps = {
+    composerModel: writeAssistantModel,
+    composerProviderId: resolvedWriteAssistantProviderId,
+    composerPickList: writeAssistantPickList,
+    skillCommands: runtimeSkills,
+    disabledSkillIds,
+    composerFastMode,
+    setComposerModel: setWriteAssistantModel,
+    setComposerFastMode,
+    onNewConversation: startNewWriteAssistantConversation,
+    onPickWorkspace: () => void pickWriteAssistantWorkspace()
+  }
+  const writeAssistantStageProps: WriteAssistantStageProps = {
+    ...rightPanelSharedProps,
+    ...writeAssistantRailProps,
+    onSend: handleSend,
+    onOpenSettings: () => openSettings('agents'),
+    onCollapse: closeRightPanel
+  }
 
   const imageAnnotationHost = (
     <WorkbenchImageAnnotationHost
@@ -238,18 +265,7 @@ export function useWorkbenchShellRuntime(context: Context): {
       historyThreadIds: designHistoryThreadIds,
       onSwitchThread: switchDesignThread
     },
-    write: {
-      composerModel: writeAssistantModel,
-      composerProviderId: resolvedWriteAssistantProviderId,
-      composerPickList: writeAssistantPickList,
-      skillCommands: runtimeSkills,
-      disabledSkillIds,
-      composerFastMode,
-      setComposerModel: setWriteAssistantModel,
-      setComposerFastMode,
-      onNewConversation: startNewWriteAssistantConversation,
-      onPickWorkspace: () => void pickWriteAssistantWorkspace()
-    },
+    write: writeAssistantRailProps,
     sdd: {
       draft: activeSddDraft,
       composerModel: writeAssistantModel,
@@ -448,6 +464,7 @@ export function useWorkbenchShellRuntime(context: Context): {
     planOverlay,
     rightPanel,
     rightPanelSharedProps,
+    writeAssistantStageProps,
     writeRuntimeBanner,
     focusedCanvasWorkspace
   }

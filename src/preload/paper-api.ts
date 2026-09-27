@@ -31,6 +31,7 @@ export const paperApi: KunGuiPaperApi = {
   paperDetectLibraries: (payload) => ipcRenderer.invoke('paper-library:detect', payload),
   paperUpdateMeta: (payload) => ipcRenderer.invoke('paper-library:update-meta', payload),
   paperMoveToGroup: (payload) => ipcRenderer.invoke('paper-library:move-to-group', payload),
+  paperCreateGroup: (payload) => ipcRenderer.invoke('paper-library:create-group', payload),
   paperTrashUnit: (payload) => ipcRenderer.invoke('paper-library:trash', payload),
   paperDownloadPdf: (payload) => ipcRenderer.invoke('paper-library:download-pdf', payload),
   paperReadingActivity: (payload) =>

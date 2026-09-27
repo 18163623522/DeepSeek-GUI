@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement, type RefObject } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpDown, FileWarning, MoreHorizontal, ScrollText } from 'lucide-react'
 import type {
   PaperLibraryEntry,
@@ -31,6 +31,24 @@ const COLUMNS: Column[] = [
   { id: 'progress', labelKey: 'writePaperColProgress', width: '72px' },
   { id: 'added', labelKey: 'writePaperColAdded', sortKey: 'importedAt', width: '92px' }
 ]
+
+// Below this width (assistant rail open, small window) the secondary
+// columns drop instead of the table scrolling sideways.
+const COMPACT_WIDTH = 780
+const COMPACT_HIDDEN: ReadonlySet<string> = new Set(['venue', 'tags', 'added'])
+
+function useCompactTable(): [RefObject<HTMLDivElement | null>, boolean] {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [compact, setCompact] = useState(false)
+  useEffect(() => {
+    const node = ref.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => setCompact((entry?.contentRect.width ?? 1000) < COMPACT_WIDTH))
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, compact]
+}
 
 const STATUS_DOT: Record<string, string> = {
   unread: 'border border-ds-faint',
@@ -83,11 +101,15 @@ export function PaperLibraryTable({
   t: Translate
 }): ReactElement {
   const allSelected = rows.length > 0 && rows.every((row) => selection.has(row.unitDir))
+  const [wrapRef, compact] = useCompactTable()
+  const hidden = compact ? COMPACT_HIDDEN : EMPTY_SET
+  const columns = COLUMNS.filter((column) => !hidden.has(column.id))
   return (
-    <table className="w-full min-w-[860px] table-fixed border-collapse text-left text-[13px]">
+    <div ref={wrapRef} className="w-full">
+    <table className={`w-full table-fixed border-collapse text-left text-[13px] ${compact ? 'min-w-[520px]' : 'min-w-[860px]'}`}>
       <colgroup>
         <col style={{ width: '36px' }} />
-        {COLUMNS.map((column) => <col key={column.id} style={{ width: column.width }} />)}
+        {columns.map((column) => <col key={column.id} style={{ width: compact && column.id === 'title' ? '55%' : column.width }} />)}
         <col style={{ width: '36px' }} />
       </colgroup>
       <thead className="sticky top-0 z-[1] bg-ds-main shadow-[0_1px_0_0_var(--ds-border-muted)]">
@@ -101,7 +123,7 @@ export function PaperLibraryTable({
               className="h-3.5 w-3.5 align-middle accent-[var(--ds-accent)]"
             />
           </th>
-          {COLUMNS.map((column) => (
+          {columns.map((column) => (
             <th key={column.id} className="px-3 font-normal">
               {column.sortKey ? (
                 <button
@@ -136,13 +158,17 @@ export function PaperLibraryTable({
             onToggle={() => onToggleSelected(entry.unitDir)}
             onOpen={() => onOpen(entry)}
             onMenu={(x, y) => onMenu(entry, x, y)}
+            hidden={hidden}
             t={t}
           />
         ))}
       </tbody>
     </table>
+    </div>
   )
 }
+
+const EMPTY_SET: ReadonlySet<string> = new Set()
 
 function PaperLibraryRow({
   entry,
@@ -151,6 +177,7 @@ function PaperLibraryRow({
   onToggle,
   onOpen,
   onMenu,
+  hidden,
   t
 }: {
   entry: PaperLibraryEntry
@@ -159,6 +186,7 @@ function PaperLibraryRow({
   onToggle: () => void
   onOpen: () => void
   onMenu: (x: number, y: number) => void
+  hidden: ReadonlySet<string>
   t: Translate
 }): ReactElement {
   const meta = entry.meta
@@ -219,9 +247,12 @@ function PaperLibraryRow({
         <span className="block truncate" title={authors}>{authors}</span>
       </td>
       <td className="whitespace-nowrap px-3 py-2.5 text-[12px] tabular-nums text-ds-muted">{meta.year ?? '—'}</td>
+      {hidden.has('venue') ? null : (
       <td className="overflow-hidden px-3 py-2.5 text-[12px] text-ds-muted">
         <span className="block truncate" title={meta.venue ?? ''}>{meta.venue || '—'}</span>
       </td>
+      )}
+      {hidden.has('tags') ? null : (
       <td className="overflow-hidden px-3 py-2.5">
         {(meta.tags ?? []).length ? (
           <span className="flex min-w-0 gap-1 overflow-hidden">
@@ -238,6 +269,7 @@ function PaperLibraryRow({
           <span className="text-[12px] text-ds-faint">—</span>
         )}
       </td>
+      )}
       <td className="whitespace-nowrap px-3 py-2.5">
         <span className="inline-flex items-center gap-1.5 text-[12px] text-ds-muted">
           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[status] ?? STATUS_DOT.unread}`} />
@@ -252,9 +284,11 @@ function PaperLibraryRow({
           tooltip={heatTooltip}
         />
       </td>
+      {hidden.has('added') ? null : (
       <td className="whitespace-nowrap px-3 py-2.5 text-[12px] tabular-nums text-ds-faint">
         {formatDate(meta.importedAt)}
       </td>
+      )}
       <td className="pr-2" onClick={(event) => event.stopPropagation()}>
         <button
           type="button"

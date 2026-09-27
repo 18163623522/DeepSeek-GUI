@@ -29,7 +29,7 @@ import type { PaperLibraryEntry } from '@shared/paper/paper-library-types'
 const HEADER_HEIGHT = 32
 const MIN_CONTENT = 96
 const MAX_CONTENT = 460
-const DEFAULT_CONTENT = 240
+const DEFAULT_CONTENT = 320
 
 type Translate = (key: string, opts?: Record<string, unknown>) => string
 
@@ -236,7 +236,7 @@ export function PaperInfoPanel(): ReactElement {
         {!entry || !meta ? (
           <p className="px-3 pb-3 text-[12px] leading-snug text-ds-faint">{t('writePaperInfoEmpty')}</p>
         ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [scrollbar-width:thin]">
             <MetaRow icon={<BookOpen className="h-3.5 w-3.5" strokeWidth={1.8} />} label={t('writePaperColTitle')}>
               <CopyValue text={meta.title} label={t('writePaperColTitle')} t={t}>
                 <PaperTitleText title={meta.title} className="font-medium" />

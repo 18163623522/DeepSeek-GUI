@@ -6,6 +6,7 @@ import {
   paperLibraryListPayloadSchema,
   paperLocalStateReadPayloadSchema,
   paperLocalStateWritePayloadSchema,
+  paperCreateGroupPayloadSchema,
   paperMoveToGroupPayloadSchema,
   paperReadingActivityPayloadSchema,
   paperTrashUnitPayloadSchema,
@@ -23,6 +24,7 @@ import type {
   PaperLibraryEntriesResult,
   PaperLibraryTrashResult,
   PaperLocalLibraryState,
+  PaperCreateGroupResult,
   PaperMoveToGroupResult,
   PaperReadingActivityResult
 } from '../../shared/paper/paper-library-types'
@@ -37,8 +39,11 @@ import {
   workspaceRelativeDir
 } from '../services/paper/paper-unit-service'
 import {
+  createPaperGroup,
   detectPaperLibraries,
+  listPaperGroups,
   movePaperUnitToGroup,
+  normalizePaperGroupPath,
   readPaperUnitMetaV2,
   scanPaperLibrary,
   scannedUnitToEntry,
@@ -104,13 +109,15 @@ export function registerAppPaperLibraryIpcHandlers(
         const workspacePath = await canonicalPath(resolvePath(request.workspaceRoot))
         const papersDir = await papersDirFor(request.papersDir)
         const papersDirAbs = await resolveTargetPathWithinWorkspace(papersDir, workspacePath)
-        const [units, local] = await Promise.all([
+        const [units, local, folders] = await Promise.all([
           scanPaperLibrary(workspacePath, papersDirAbs),
-          readPaperLocalLibraryState(userDataDir(), workspacePath)
+          readPaperLocalLibraryState(userDataDir(), workspacePath),
+          listPaperGroups(papersDirAbs)
         ])
         const counts = emptyCounts()
         const tags = new Set<string>()
-        const groups = new Set<string>()
+        // Empty folders count too: users create them as import targets.
+        const groups = new Set<string>(folders)
         const entries = units.map((unit) => {
           const entry = scannedUnitToEntry(unit, local.units[unit.unitDir])
           counts.total += 1
@@ -187,6 +194,26 @@ export function registerAppPaperLibraryIpcHandlers(
   )
 
   ipcMain.handle(
+    'paper-library:create-group',
+    async (event, payload: unknown): Promise<PaperCreateGroupResult> => {
+      assertTrustedWorkbenchSender(event, getMainWindow)
+      const request = parseIpcPayload('paper-library:create-group', paperCreateGroupPayloadSchema, payload)
+      try {
+        const workspacePath = await canonicalPath(resolvePath(request.workspaceRoot))
+        const papersDirAbs = await resolveTargetPathWithinWorkspace(await papersDirFor(), workspacePath)
+        const group = await createPaperGroup(papersDirAbs, request.group)
+        return { ok: true, group }
+      } catch (error) {
+        logError?.('paper-library', 'paper-library:create-group failed', error)
+        if (error instanceof PaperUnitError && error.code === 'invalid-unit') {
+          return { ok: false, code: 'invalid-group', message: error.message }
+        }
+        return paperErrorResult<PaperCreateGroupResult>(error, 'io')
+      }
+    }
+  )
+
+  ipcMain.handle(
     'paper-library:move-to-group',
     async (event, payload: unknown): Promise<PaperMoveToGroupResult> => {
       assertTrustedWorkbenchSender(event, getMainWindow)
@@ -200,8 +227,8 @@ export function registerAppPaperLibraryIpcHandlers(
         const papersDir = await papersDirFor()
         const papersDirAbs = await resolveTargetPathWithinWorkspace(papersDir, workspacePath)
         const unitDirAbs = await resolveTargetPathWithinWorkspace(request.unitDir, workspacePath)
-        const group = request.group.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
-        if (group.split('/').some((segment) => !segment || segment === '.' || segment === '..')) {
+        const group = normalizePaperGroupPath(request.group.replace(/^[\\/]+|[\\/]+$/g, ''))
+        if (group === null) {
           return { ok: false, code: 'invalid-group', message: 'Invalid group path.' }
         }
         if (!(await readPaperUnitMetaV2(unitDirAbs))) {

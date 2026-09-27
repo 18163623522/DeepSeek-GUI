@@ -51,6 +51,7 @@ export async function searchPapersForGui(
     limit?: number
     yearFrom?: number
     yearTo?: number
+    retry?: boolean
   },
   context: GuiPaperSearchContext = {}
 ): Promise<PaperSearchResult> {
@@ -64,15 +65,17 @@ export async function searchPapersForGui(
     return { ok: false, code: 'invalid-input', message: 'All selected sources are disabled in settings.' }
   }
   try {
+    const { retry, ...searchRequest } = request
     const response = await runPaperSearch(
-      { ...request, ...(sources ? { sources } : {}) },
+      { ...searchRequest, ...(sources ? { sources } : {}) },
       {
         fetch: (url, init) => fetchWithOptionalProxy(url, init, context.proxyUrl ?? ''),
         signal: context.signal,
         credentials,
         userAgent: userAgent(),
         cache: guiCache,
-        rateLimiter: guiRateLimiter
+        rateLimiter: guiRateLimiter,
+        bypassDegraded: retry === true
       }
     )
     return { ok: true, ...response }

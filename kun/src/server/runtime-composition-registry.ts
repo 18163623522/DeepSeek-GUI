@@ -405,7 +405,8 @@ export function createRuntimeRegistry(
     ...buildPaperSearchToolProvider({
       proxyUrl: () => core.activeOptions.modelProxyUrl,
       enabledSources: () => core.activeOptions.capabilities?.paperSearch?.enabledSources,
-      credentials: () => resolvePaperSearchCredentials(core.activeOptions.capabilities?.paperSearch)
+      credentials: () => resolvePaperSearchCredentials(core.activeOptions.capabilities?.paperSearch),
+      parentThreadId: async (threadId) => (await threadStore.get(threadId))?.parentThreadId
     })
   ])
   return {

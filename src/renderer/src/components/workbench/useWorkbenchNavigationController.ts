@@ -559,7 +559,8 @@ export function useWorkbenchNavigationController({
           activeFilePath: writeState.activeFilePath,
           unitDirs: Object.keys(usePaperStore.getState().unitsByDir),
           entriesByDir: writeState.entriesByDir,
-          view: paperModeView(writeState)
+          view: paperModeView(writeState),
+          researchSessionId: writeState.paperResearch.sessionId
         }) ?? ''
       : writeState.activeFilePath ?? undefined
     void createWriteThread(

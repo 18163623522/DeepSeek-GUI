@@ -93,26 +93,30 @@ export function preserveRedactedProviderCredentials(
 
   // `write.paperMode.search` keys are write-only in the renderer projection;
   // an empty value round-tripping through `settings:set` means "unchanged".
+  // Clearing is explicit via `clearCredentials`, which never persists.
   const prevPaperSearch = prev.write?.paperMode?.search
   const incomingPaperMode = partial.write?.paperMode
-  if (incomingPaperMode?.search && prevPaperSearch) {
-    const incomingSearch = incomingPaperMode.search
-    const preservedKeys: Record<string, string> = {}
+  if (incomingPaperMode?.search) {
+    const { clearCredentials, ...incomingSearch } = incomingPaperMode.search
+    const cleared = new Set(Array.isArray(clearCredentials) ? clearCredentials : [])
+    const keys: Record<string, string> = {}
     for (const key of ['semanticScholarApiKey', 'coreApiKey'] as const) {
-      const previous = typeof prevPaperSearch[key] === 'string' ? prevPaperSearch[key] : ''
-      const incoming = typeof incomingSearch[key] === 'string' ? incomingSearch[key] : undefined
-      if (incoming !== undefined && !incoming.trim() && previous.trim()) {
-        preservedKeys[key] = previous
+      if (cleared.has(key)) {
+        keys[key] = ''
+        continue
       }
+      const previous = typeof prevPaperSearch?.[key] === 'string' ? prevPaperSearch[key] : ''
+      const incoming = typeof incomingSearch[key] === 'string' ? incomingSearch[key] : undefined
+      if (incoming !== undefined && !incoming.trim() && previous.trim()) keys[key] = previous
     }
-    if (Object.keys(preservedKeys).length) {
+    if (clearCredentials !== undefined || Object.keys(keys).length) {
       next = {
         ...next,
         write: {
           ...next.write,
           paperMode: {
             ...incomingPaperMode,
-            search: { ...incomingSearch, ...preservedKeys }
+            search: { ...incomingSearch, ...keys }
           }
         }
       }

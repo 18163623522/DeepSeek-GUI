@@ -273,6 +273,14 @@ export async function fetchOpenAlexCitationTrend(
     .sort((a, b) => a.year - b.year)
 }
 
+export type PaperDetailsEntry = {
+  id: string
+  hit?: PaperSourceHit
+  extra?: { tldr?: string; fieldsOfStudy?: string[] }
+  /** Index that resolved the paper. */
+  via?: 'semantic_scholar' | 'openalex'
+}
+
 /**
  * Resolve full details for up to `ids.length` papers (S2 batch, then an
  * OpenAlex lookup for anything S2 missed).
@@ -280,9 +288,9 @@ export async function fetchOpenAlexCitationTrend(
 export async function fetchPaperDetails(
   ids: string[],
   ctx: LookupContext
-): Promise<Array<{ id: string; hit?: PaperSourceHit; extra?: { tldr?: string; fieldsOfStudy?: string[] } }>> {
+): Promise<PaperDetailsEntry[]> {
   const s2Ids = ids.map(s2PaperId)
-  const results: Array<{ id: string; hit?: PaperSourceHit; extra?: { tldr?: string; fieldsOfStudy?: string[] } }> =
+  const results: PaperDetailsEntry[] =
     ids.map((id) => ({ id }))
   const resolved = ids.map((id, i) => ({ index: i, id, s2Id: s2Ids[i] })).filter((row) => row.s2Id)
   for (const row of resolved) {
@@ -298,6 +306,7 @@ export async function fetchPaperDetails(
         results[row.index] = {
           id: row.id,
           hit,
+          via: 'semantic_scholar',
           extra: {
             tldr: paper.tldr?.text || undefined,
             fieldsOfStudy: paper.fieldsOfStudy ?? undefined
@@ -313,7 +322,7 @@ export async function fetchPaperDetails(
     try {
       const work = await openAlexWorkById(ctx, entry.id)
       const hit = work ? mapOpenAlexWork(work) : null
-      if (hit) results[index] = { id: entry.id, hit }
+      if (hit) results[index] = { id: entry.id, hit, via: 'openalex' }
     } catch {
       // Unresolved ids stay unresolved.
     }

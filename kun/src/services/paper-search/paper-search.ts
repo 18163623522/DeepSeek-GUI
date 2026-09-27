@@ -74,6 +74,8 @@ export type PaperSearchOptions = {
   cache?: PaperSearchCache<PaperSourceHit[]>
   /** Shared per-source pacing + degradation tracker; omit to disable. */
   rateLimiter?: PaperRateLimiter
+  /** Explicit user retry: query sources even while they are auto-skipped. */
+  bypassDegraded?: boolean
 }
 
 export function normalizePaperSearchSources(raw: readonly string[] | undefined): PaperSearchSource[] {
@@ -98,7 +100,7 @@ async function runSource(
 ): Promise<{ report: PaperSearchSourceReport; hits: PaperSourceHit[] }> {
   const started = Date.now()
   const limiter = options.rateLimiter
-  if (limiter?.isDegraded(source)) {
+  if (!options.bypassDegraded && limiter?.isDegraded(source)) {
     return {
       report: { source, count: 0, ms: 0, error: 'rate limited (auto-skipped)', degraded: true },
       hits: []

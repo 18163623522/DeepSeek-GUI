@@ -501,6 +501,15 @@ export function writeThreadIdsForFile(
   return [...(record.fileThreadHistoryIds[fileKey] ?? [])]
 }
 
+/** Threads bound to virtual `.kun-research/<session>` resources. */
+function researchThreadIds(record: WriteThreadWorkspaceRecord): Set<string> {
+  const ids = new Set<string>()
+  for (const [fileKey, threadIds] of Object.entries(record.fileThreadHistoryIds)) {
+    if (/\/\.kun-research\/[^/]+$/.test(fileKey)) for (const id of threadIds) ids.add(id)
+  }
+  return ids
+}
+
 export function activeWriteThreadForWorkspace(
   workspaceRoot: string,
   threads: NormalizedThread[],
@@ -512,10 +521,15 @@ export function activeWriteThreadForWorkspace(
   const record = registry.workspaces[key]
   if (!record) return null
   const fileKey = writeFileKey(filePath)
-  const targetThreadId = fileKey ? record.fileThreadIds[fileKey] : record.activeThreadId
+  // Paper research sessions own their thread; never let one stand in for the
+  // library-level (no file) conversation just because it was used last.
+  const researchIds = fileKey ? null : researchThreadIds(record)
+  const targetThreadId = fileKey
+    ? record.fileThreadIds[fileKey]
+    : researchIds?.has(record.activeThreadId) ? undefined : record.activeThreadId
   const candidateIds = fileKey
     ? record.fileThreadHistoryIds[fileKey] ?? (targetThreadId ? [targetThreadId] : [])
-    : record.threadIds
+    : record.threadIds.filter((id) => !researchIds?.has(id))
   if (fileKey && candidateIds.length === 0) return null
   const candidates = candidateIds
     .map((id) => threads.find((thread) => thread.id === id) ?? null)

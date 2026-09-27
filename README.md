@@ -32,7 +32,7 @@
 
 ## Kun 是什么
 
-Kun 是把 AI 从“回答问题”推进到“完成工作”的本地优先工作台。它以两个主模式组织真实工作：Code 面向软件交付，并在同一任务中提供 Design 画布；Work 面向写作、资料整理、文档分析和演示产出。Agent 可以读取工作区上下文、制定计划、调用工具、修改文件、运行验证，并把证据留在任务旁。
+Kun 是把 AI 从“回答问题”推进到“完成工作”的本地优先工作台。它以互补的界面组织真实工作：Code 面向软件交付，并在同一任务中提供 Design 画布；Work 面向写作、资料整理、文档分析和演示产出；Rooms 把多个 Agent 放进同一个协作空间，用私聊和群聊完成讨论、分工、执行与评审。Agent 可以读取工作区上下文、制定计划、调用工具、修改文件、运行验证，并把证据留在任务旁。
 
 桌面 GUI 适合观察、审阅和控制过程；终端 TUI 适合专注于键盘工作。两者通过同一个本地 `kun serve` 运行时共享线程、目标、计划、审批和后台任务，而不是两套彼此割裂的会话。
 
@@ -43,6 +43,7 @@ Kun 是把 AI 从“回答问题”推进到“完成工作”的本地优先工
 | 构建、调试与发布软件 | Code 模式提供项目上下文、文件编辑、终端、Git / Worktree、Diff、测试和审查。 |
 | 从需求走到可实现的设计 | 在同一 Code 任务中切换 Design 画布，沉淀原型、设计系统和 Design → Code 上下文。 |
 | 写作、整理与处理日常任务 | Work 模式可编辑 Markdown，预览、引用和分析 PDF / Office 文档，分析电子表格，并从大纲创建演示文稿；Office 文件保持只读。 |
+| 让多个 Agent 协作推进需求 | Rooms 提供私聊与群聊、可配置成员团队与协作模式、@ 提及与提案卡片；执行任务在独立 Git worktree 中验证、评审并交付。 |
 | 自动化重复流程 | Scheduled tasks、Loops、Hooks、MCP、Skills 与可安装扩展。 |
 | 选择模型和接入方式 | 订阅、计划、API、OpenAI / Anthropic 兼容服务与自托管模型均可通过 Provider 配置接入。 |
 
@@ -78,6 +79,15 @@ Work 模式用工作区文件树、任务启动器和 Work assistant 组织文�
 4. **以证据完成交付。** 回看 Diff、测试、审查和产物；需求变化后可以继续、分叉、归档或重新规划。
 
 需求和计划默认可以保存在项目中，因此能进入版本控制、代码审查和后续恢复流程。
+
+## Rooms：多 Agent 协作空间
+
+Rooms 与 Code、Work 并列：创建一个房间，为成员选择 Agent 档案、模型和授权的本地仓库，然后用 IM 式的私聊或群聊推进工作。
+
+- **多种协作方式。** 默认同行讨论由成员自行判断是否发言；协调者模式由 Coordinator 分配任务；定向协作直接点名成员或默认响应者。
+- **人保留最终决策。** Agent 可以起草提案卡片——固定约定、请求执行、添加成员——但只有你能采纳或忽略。
+- **执行隔离且有证据。** 每个执行任务在独立 Git worktree 中运行，交付固定为不可变版本再交 Reviewer 评审；声明的验证检查、Diff、日志与集成面板都留在房间内。
+- **约定显式可控。** 只有你明确固定的内容才成为项目约定；约定按版本冻结进任务快照，历史可回看，可随时停用或恢复。
 
 ## 本地优先，不等于永不联网
 
@@ -142,6 +152,7 @@ npm ci --registry=https://registry.npmmirror.com
 | --- | --- |
 | TUI、命令和运行时 | [docs/kun-tui.md](docs/kun-tui.md) / [kun/README.zh-CN.md](kun/README.zh-CN.md) |
 | Design 工作流 | [docs/DESIGN_MODE.md](docs/DESIGN_MODE.md) |
+| Rooms 多 Agent 协作 | [docs/rooms.md](docs/rooms.md) |
 | Loops、MCP 与 Skills | [docs/workflow-loop.md](docs/workflow-loop.md) / [docs/project-mcp-skills.md](docs/project-mcp-skills.md) |
 | Extension 平台 | [docs/extensions/README.md](docs/extensions/README.md) |
 | 本地开发 | [docs/DEVELOPMENT.zh-CN.md](docs/DEVELOPMENT.zh-CN.md) |

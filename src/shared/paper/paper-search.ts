@@ -21,6 +21,13 @@ export type {
   PaperSearchSourceReport
 } from '../../../kun/src/services/paper-search/paper-search-types.js'
 
+/** Pure title matching shared with the engine's merge rules. */
+export {
+  jaccardSimilarity,
+  titleKey,
+  titleTokens
+} from '../../../kun/src/services/paper-search/paper-search-text.js'
+
 import type { PaperSearchResponse } from '../../../kun/src/services/paper-search/paper-search-types.js'
 
 export type PaperSearchResult =

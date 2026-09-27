@@ -5,7 +5,7 @@
  * and contained inside the workspace by the IPC layer.
  */
 import { basename, join, relative, sep } from 'node:path'
-import { mkdir, readdir, readFile, rename } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, rename } from 'node:fs/promises'
 import {
   paperUnitMetaSchema,
   upgradePaperMeta,
@@ -104,7 +104,8 @@ async function scanDir(
     })
     return
   }
-  if (depth >= SCAN_MAX_DEPTH) return
+  // A paper unit may sit inside a folder at the maximum group depth.
+  if (depth > SCAN_MAX_DEPTH) return
   let entries
   try {
     entries = await readdir(dirAbs, { withFileTypes: true })
@@ -204,9 +205,9 @@ export async function updatePaperUnitMetaV2(
 }
 
 /**
- * Move a unit into `<papersDir>/<group>` ('' = top level). Group names are
- * single path segments chains; '..' / separators escaping the papers dir are
- * rejected by the caller's containment check.
+ * Move a unit into `<papersDir>/<group>` ('' = top level). The group is
+ * validated like a new folder, so a moved paper always stays within the
+ * depth the library scan reaches.
  */
 export async function movePaperUnitToGroup(
   rootAbs: string,
@@ -218,11 +219,9 @@ export async function movePaperUnitToGroup(
   if (!insidePapers || insidePapers.startsWith('..') || insidePapers.startsWith('/')) {
     throw new PaperUnitError('invalid-unit', 'Paper unit is outside the papers directory.')
   }
-  const targetParent = group ? join(papersDirAbs, group) : papersDirAbs
-  const parentInside = toSlashes(relative(papersDirAbs, targetParent))
-  if (parentInside.startsWith('..') || parentInside.startsWith('/')) {
-    throw new PaperUnitError('invalid-unit', 'Group path escapes the papers directory.')
-  }
+  const normalized = normalizePaperGroupPath(group)
+  if (normalized === null) throw new PaperUnitError('invalid-unit', 'Invalid folder name.')
+  const targetParent = normalized ? await paperGroupDirAbs(papersDirAbs, normalized) : papersDirAbs
   await mkdir(targetParent, { recursive: true })
   const target = join(targetParent, basename(unitDirAbs))
   if (target === unitDirAbs) {
@@ -235,11 +234,66 @@ export async function movePaperUnitToGroup(
   return { unitDirAbs: target, unitDir: toSlashes(relative(rootAbs, target)) }
 }
 
-/** List the subgroup dirs directly inside `<papersDir>/` (one level). */
+/** Portable folder segment: no reserved path characters or control chars. */
+function validFolderSegment(segment: string): boolean {
+  if (/[<>:"|?*]/.test(segment)) return false
+  return [...segment].every((char) => char.charCodeAt(0) >= 32)
+}
+
+/**
+ * Normalize a folder path under `<papersDir>/` ('' = top level). Returns null
+ * for empty/dot segments, reserved names or characters, and paths deeper
+ * than the library scan reaches (3 levels).
+ */
+export function normalizePaperGroupPath(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  const segments = trimmed.replace(/\\/g, '/').split('/').map((segment) => segment.trim())
+  const invalid = segments.length > SCAN_MAX_DEPTH
+    || segments.some((segment) => !segment || segment.startsWith('.') || PAPER_UNIT_CHILD_DIRS.has(segment) || !validFolderSegment(segment))
+  return invalid ? null : segments.join('/')
+}
+
+/**
+ * Absolute dir for a normalized non-empty group. Refuses symlinked segments
+ * and segments that are existing paper units (no folders inside a paper).
+ */
+async function paperGroupDirAbs(papersDirAbs: string, group: string): Promise<string> {
+  let current = papersDirAbs
+  for (const segment of group.split('/')) {
+    current = join(current, segment)
+    const existing = await lstat(current).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return null
+      throw error
+    })
+    if (existing?.isSymbolicLink()) {
+      throw new PaperUnitError('invalid-unit', 'A folder path cannot contain a symbolic link.')
+    }
+    if (await isPaperUnitDir(current)) {
+      throw new PaperUnitError('invalid-unit', 'A paper already uses this folder name.')
+    }
+  }
+  const inside = toSlashes(relative(papersDirAbs, current))
+  if (!inside || inside.startsWith('..')) throw new PaperUnitError('invalid-unit', 'Folder escapes the papers directory.')
+  return current
+}
+
+/**
+ * Create `<papersDir>/<group>` (nested paths allowed, depth <= 3) and return
+ * the normalized group.
+ */
+export async function createPaperGroup(papersDirAbs: string, rawGroup: string): Promise<string> {
+  const group = normalizePaperGroupPath(rawGroup)
+  if (!group) throw new PaperUnitError('invalid-unit', 'Invalid folder name.')
+  await mkdir(await paperGroupDirAbs(papersDirAbs, group), { recursive: true })
+  return group
+}
+
+/** List every folder beneath `<papersDir>/`, including empty nested folders. */
 export async function listPaperGroups(papersDirAbs: string): Promise<string[]> {
   const groups = new Set<string>()
   const collect = async (dirAbs: string, prefix: string, depth: number): Promise<void> => {
-    if (depth > SCAN_MAX_DEPTH) return
+    if (depth >= SCAN_MAX_DEPTH) return
     if (await isPaperUnitDir(dirAbs)) return
     let entries
     try {
@@ -253,9 +307,9 @@ export async function listPaperGroups(papersDirAbs: string): Promise<string[]> {
       const rel = prefix ? `${prefix}/${entry.name}` : entry.name
       const childAbs = join(dirAbs, entry.name)
       if (await isPaperUnitDir(childAbs)) {
-        groups.add(prefix)
         continue
       }
+      groups.add(rel)
       await collect(childAbs, rel, depth + 1)
     }
   }
@@ -339,7 +393,8 @@ export async function importPaperBibtex(
   rootAbs: string,
   papersDirAbs: string,
   bibtex: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  targetDirAbs = papersDirAbs
 ): Promise<{ imported: number; skipped: number; entries: PaperBibtexImportEntry[] }> {
   const parsed = parseBibtexEntries(bibtex)
   if (parsed.length === 0) {
@@ -388,7 +443,7 @@ export async function importPaperBibtex(
     )
     takenKeys.add(citeKey)
     const created = await importPaperUnitFromMeta({
-      parentAbs: papersDirAbs,
+      parentAbs: targetDirAbs,
       slugHint: bibtexSlug(fields, citeKey),
       meta: {
         title,

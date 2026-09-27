@@ -122,6 +122,7 @@ export const useWriteWorkspaceStore = create<WriteWorkspaceState>((set, get) => 
   paperReading: defaultWritePaperReadingSettings(),
   paperMode: defaultWritePaperModeSettings(),
   workSurface: 'docs',
+  paperResearch: { agentTab: true, sessionId: null },
   imageGenReady: false,
   prototypeReady: false,
   settingsLoading: false,

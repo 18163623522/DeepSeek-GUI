@@ -66,7 +66,11 @@ export const searchDblp: PaperSourceConnector = async (q, { fetch, signal }) => 
     const hint = response.status === 429 ? ' (rate limited)' : ''
     throw new PaperSourceHttpError(response.status, `HTTP ${response.status}${hint}`)
   }
-  return parseDblpSearch(await response.json())
+  const text = await response.text()
+  // dblp fronts its API with a bot-check page for some networks; report that
+  // plainly instead of a JSON parse error.
+  if (/^\s*</.test(text)) throw new PaperSourceHttpError(403, 'blocked by the dblp bot check')
+  return parseDblpSearch(JSON.parse(text) as unknown)
     .filter((hit) => hit.year === undefined || inYearRange(hit.year, q.yearFrom, q.yearTo))
     .slice(0, q.limit)
 }

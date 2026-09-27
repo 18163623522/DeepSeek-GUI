@@ -1,5 +1,6 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import {
+  FolderPlus,
   Settings,
   Smartphone,
   WandSparkles
@@ -58,6 +59,7 @@ export function PaperSidebar({
   const activePaperView = useWriteWorkspaceStore((s) => activePaperViewId(s.editorLayout))
   const counts = usePaperModeStore((s) => s.counts)
   const setImportDialogOpen = usePaperModeStore((s) => s.setImportDialogOpen)
+  const [creatingFolder, setCreatingFolder] = useState(false)
 
   return (
     <SidebarFrame
@@ -129,8 +131,19 @@ export function PaperSidebar({
             <PaperSidebarNav activeView={activePaperView} total={counts.total} />
           </div>
 
-          <SidebarSectionHeader label={t('writePaperModePapers')} />
-          <PaperTree />
+          <SidebarSectionHeader
+            label={t('writePaperModePapers')}
+            actions={(
+              <SidebarIconButton
+                title={t('paperImportFolderNew')}
+                ariaLabel={t('paperImportFolderNew')}
+                onClick={() => setCreatingFolder(true)}
+              >
+                <FolderPlus className="h-3.5 w-3.5" strokeWidth={1.75} />
+              </SidebarIconButton>
+            )}
+          />
+          <PaperTree creatingFolder={creatingFolder} onCreatingFolderDone={() => setCreatingFolder(false)} />
           <PaperInfoPanel />
         </div>
       )}

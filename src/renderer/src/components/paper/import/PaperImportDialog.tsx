@@ -24,6 +24,8 @@ import {
 } from '../../../paper/paper-import-queue'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
 import { PaperSearchCandidates } from './PaperSearchCandidates'
+import { PaperImportFolderPicker } from './PaperImportFolderPicker'
+import { currentImportParentDir } from '../../../paper/paper-import-target'
 
 const STATUS_ICON: Record<PaperImportItemStatus, ReactElement> = {
   pending: <CircleDashed className="h-3.5 w-3.5 text-ds-faint" strokeWidth={2} />,
@@ -51,10 +53,13 @@ const ACTIVE: ReadonlySet<PaperImportItemStatus> = new Set([
 export function PaperImportDialog({
   workspaceRoot,
   papersDir,
+  folderPicker = false,
   onClose
 }: {
   workspaceRoot: string
   papersDir?: string
+  /** Paper mode: let the user file imports into a library folder. */
+  folderPicker?: boolean
   onClose: () => void
 }): ReactElement {
   const { t } = useTranslation('common')
@@ -131,7 +136,7 @@ export function PaperImportDialog({
     try {
       await runPaperImportQueue(
         queue,
-        { workspaceRoot, papersDir, downloadPdfs },
+        { workspaceRoot, papersDir: folderPicker ? currentImportParentDir() : papersDir, downloadPdfs },
         { onItem: patchItem }
       )
     } finally {
@@ -198,7 +203,8 @@ export function PaperImportDialog({
             <FileUp className="h-3.5 w-3.5" strokeWidth={1.9} />
             {t('writePaperImportPickFiles')}
           </button>
-          <label className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] text-ds-muted">
+          {folderPicker ? <PaperImportFolderPicker className="ml-auto" /> : null}
+          <label className={`${folderPicker ? '' : 'ml-auto '}inline-flex items-center gap-1.5 text-[12.5px] text-ds-muted`}>
             <input
               type="checkbox"
               checked={downloadPdfs}

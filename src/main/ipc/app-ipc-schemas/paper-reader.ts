@@ -145,7 +145,9 @@ export const paperSearchPayloadSchema = z
     sources: z.array(z.enum(PAPER_SEARCH_SOURCES)).max(PAPER_SEARCH_SOURCES.length).optional(),
     limit: z.number().int().min(1).max(25).optional(),
     yearFrom: z.number().int().min(1900).max(2100).optional(),
-    yearTo: z.number().int().min(1900).max(2100).optional()
+    yearTo: z.number().int().min(1900).max(2100).optional(),
+    /** Explicit user retry: query sources even while they are auto-skipped. */
+    retry: z.boolean().optional()
   })
   .strict()
 

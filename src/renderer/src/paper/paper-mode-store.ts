@@ -8,7 +8,7 @@ import type {
   PaperVenueCatalogEntry,
   PaperVenueItem
 } from '@shared/paper/paper-library-types'
-import type { PaperSearchResponse } from '@shared/paper/paper-search'
+import type { PaperSearchResponse, PaperSearchSource } from '@shared/paper/paper-search'
 import type { PaperModeView } from './paper-conversation-scope'
 import { usePaperStore } from '../write/paper/paper-store'
 
@@ -18,6 +18,13 @@ export const PAPER_DEFAULT_SORT: PaperLibrarySort = { key: 'importedAt', dir: 'd
 
 export function emptyPaperLibraryFilter(): PaperLibraryFilter {
   return { query: '', status: '', tag: '', group: '', year: '', source: '', recent: false }
+}
+
+export type PaperResearchDraft = {
+  query: string
+  sources: PaperSearchSource[]
+  yearFrom?: number
+  yearTo?: number
 }
 
 export type PaperDiscoverState = {
@@ -44,14 +51,11 @@ export type PaperDiscoverState = {
   searchResult: PaperSearchResponse | null
   searchLoading: boolean
   searchError: string | null
-  /** Search page mode: direct multi-source search vs. delegated agent search. */
-  searchTab: 'direct' | 'agent'
   /**
-   * Agent-search tracking (P1.4): `anchorIndex` is the chat-block count at
-   * submit time, so the pane can slice off this run's tool rows and the final
-   * paper-list block even while other turns scroll by.
+   * Direct-search query and scope handed to the Agent research stage; its
+   * "new research" state starts pre-filled from it.
    */
-  agentSearch: { query: string; anchorIndex: number; startedAt: string } | null
+  researchDraft: PaperResearchDraft | null
 }
 
 /**
@@ -81,6 +85,8 @@ export type PaperModeState = {
   counts: { total: number; unread: number; reading: number; read: number; missingPdf: number }
   tags: string[]
   groups: string[]
+  /** Import target folder per library root ('' = papers dir); see paper-import-target. */
+  importFolders: Readonly<Record<string, string>>
   importDialogOpen: boolean
   /** Bumped to re-run the library scan (imports, external edits). */
   entriesRefreshToken: number
@@ -110,6 +116,9 @@ export type PaperModeState = {
   setEntriesLoading: (loading: boolean) => void
   setEntriesError: (message: string | null) => void
   setImportDialogOpen: (open: boolean) => void
+  setImportFolder: (library: string, folder: string) => void
+  /** Optimistically list a folder created before the next library scan. */
+  addGroup: (group: string) => void
   refreshEntries: () => void
   patchDiscover: (patch: Partial<PaperDiscoverState>) => void
 }
@@ -137,8 +146,7 @@ const emptyDiscover = (): PaperDiscoverState => ({
   searchResult: null,
   searchLoading: false,
   searchError: null,
-  searchTab: 'direct',
-  agentSearch: null
+  researchDraft: null
 })
 
 export const usePaperModeStore = create<PaperModeState>((set) => ({
@@ -151,6 +159,7 @@ export const usePaperModeStore = create<PaperModeState>((set) => ({
   counts: { total: 0, unread: 0, reading: 0, read: 0, missingPdf: 0 },
   tags: [],
   groups: [],
+  importFolders: {},
   importDialogOpen: false,
   entriesRefreshToken: 0,
   discover: emptyDiscover(),
@@ -181,6 +190,14 @@ export const usePaperModeStore = create<PaperModeState>((set) => ({
   setEntriesLoading: (entriesLoading) => set({ entriesLoading }),
   setEntriesError: (entriesError) => set({ entriesError, entriesLoading: false }),
   setImportDialogOpen: (importDialogOpen) => set({ importDialogOpen }),
+  setImportFolder: (library, folder) =>
+    set((state) => ({ importFolders: { ...state.importFolders, [library]: folder } })),
+  addGroup: (group) =>
+    set((state) =>
+      state.groups.includes(group)
+        ? {}
+        : { groups: [...state.groups, group].sort((a, b) => a.localeCompare(b)) }
+    ),
   refreshEntries: () => set((state) => ({ entriesRefreshToken: state.entriesRefreshToken + 1 })),
   patchDiscover: (patch) => set((state) => ({ discover: { ...state.discover, ...patch } }))
 }))

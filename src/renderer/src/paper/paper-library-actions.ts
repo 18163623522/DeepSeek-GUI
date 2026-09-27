@@ -12,6 +12,7 @@ import { normalizePath } from '../write/write-workspace-store-helpers'
 import { usePaperModeStore } from './paper-mode-store'
 import { enterPaperMode } from './paper-mode-actions'
 import { applyPaperReaderLayout, readPaperReaderLayout } from './paper-reader-layout'
+import { paperImportParentDir, readImportFolder } from './paper-import-target'
 
 function paperNotice(notice: { tone: 'info' | 'success' | 'error'; message: string }): void {
   usePaperStore.getState().setNotice(notice)
@@ -38,7 +39,7 @@ export async function addPdfToPaperLibrary(input: {
     void enterPaperMode()
     return
   }
-  const papersDir = state.paperReading.papersDir || 'papers'
+  const parentDir = paperImportParentDir(state.paperReading.papersDir, readImportFolder(library))
   const requestId = newPaperRequestId()
   usePaperStore.getState().beginJob('import', requestId)
   try {
@@ -46,7 +47,7 @@ export async function addPdfToPaperLibrary(input: {
       workspaceRoot: library,
       input: '',
       localPdfPath: input.pdfPath,
-      parentDir: papersDir,
+      parentDir,
       requestId
     })
     if (!result.ok) {

@@ -1,4 +1,5 @@
 import type { CapabilityRegistry } from '../../adapters/tool/capability-registry.js'
+import { stashSdkToolResultMeta } from '../agent-sdk/sdk-tool-result-meta.js'
 import type { AttachmentStore } from '../../attachments/attachment-store.js'
 import type {
   ApprovalPolicy,
@@ -7,7 +8,7 @@ import type {
 } from '../../contracts/policy.js'
 import type { ActingTurnModelRoute } from '../../contracts/turns.js'
 import type { ThreadRecord } from '../../contracts/threads.js'
-import type { TurnItem } from '../../contracts/items.js'
+
 import { makeUserInputItem } from '../../domain/item.js'
 import type { ApprovalRequest } from '../../domain/approval.js'
 import type { InstructionRuntime } from '../../instructions/instruction-runtime.js'
@@ -48,7 +49,7 @@ import {
   awaitAbortableGate,
   userInputRequestWithDeadline
 } from '../../services/interactive-gate.js'
-import { sessionEventExists } from '../../adapters/session-event-query.js'
+import { settleUserInputResolution } from '../../services/user-input-settlement.js'
 import type { SkillRuntime } from '../../skills/skill-runtime.js'
 import {
   DEFAULT_APPROVAL_REVIEWER,
@@ -183,19 +184,22 @@ export function createCursorSdkRuntime(
         questions: input.questions,
         ...(input.timeoutSeconds !== undefined ? { timeoutSeconds: input.timeoutSeconds } : {})
       })
+      let requestedSeq: number | undefined
       try {
         await deps.turns.applyItem(threadId, item)
-        await deps.events.record({
-          kind: 'user_input_requested',
-          threadId,
-          turnId,
-          itemId: item.id,
-          inputId: input.id,
-          status: 'pending',
-          prompt: input.prompt,
-          questions: input.questions,
-          ...(input.timeoutSeconds !== undefined ? { timeoutSeconds: input.timeoutSeconds } : {})
-        })
+        requestedSeq = (
+          await deps.events.record({
+            kind: 'user_input_requested',
+            threadId,
+            turnId,
+            itemId: item.id,
+            inputId: input.id,
+            status: 'pending',
+            prompt: input.prompt,
+            questions: input.questions,
+            ...(input.timeoutSeconds !== undefined ? { timeoutSeconds: input.timeoutSeconds } : {})
+          })
+        ).seq
       } catch (error) {
         userInputGate.resolve(input.id, { status: 'cancelled' })
         void pending.catch(() => undefined)
@@ -219,29 +223,21 @@ export function createCursorSdkRuntime(
       } finally {
         disarmTimeout()
       }
-      await deps.turns.updateItem(threadId, item.id, {
-        status: resolution.status,
-        finishedAt: nowIso(),
-        ...(resolution.status === 'submitted' ? { answers: resolution.answers } : {})
-      } as Partial<TurnItem>)
-      const alreadyRecorded = await sessionEventExists(
-        deps.sessionStore,
+      await settleUserInputResolution({
+        turns: deps.turns,
+        events: deps.events,
+        sessionStore: deps.sessionStore,
         threadId,
-        (event) => event.kind === 'user_input_resolved' && event.inputId === input.id
-      )
-      if (!alreadyRecorded) {
-        await deps.events.record({
-          kind: 'user_input_resolved',
-          threadId,
-          turnId,
-          itemId: item.id,
-          inputId: input.id,
-          status: resolution.status,
-          prompt: input.prompt,
-          questions: input.questions,
-          ...(resolution.status === 'submitted' ? { answers: resolution.answers } : {})
-        })
-      }
+        turnId,
+        itemId: item.id,
+        inputId: input.id,
+        prompt: input.prompt,
+        questions: input.questions,
+        resolution,
+        requestedSeq,
+        nowIso,
+        signal
+      })
       return resolution
     }
   }
@@ -580,6 +576,9 @@ export function createCursorSdkRuntime(
                 output: result.item.output,
                 isError: result.item.isError
               }
+              // The Cursor stream synthesizes the tool_result item later; park
+              // the client sideband for the event mapper (same as the SDK path).
+              stashSdkToolResultMeta(context.threadId, toolCallId?.trim(), result.item.meta)
               if (
                 toolName === 'graph_define_plan' &&
                 delegatedGraphPlanWasCommitted(toolResult)

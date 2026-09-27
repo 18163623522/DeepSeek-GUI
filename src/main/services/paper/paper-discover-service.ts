@@ -6,6 +6,7 @@ import type {
   PaperTitleSearchCandidate
 } from '../../../shared/paper/paper-library-types'
 import { decodeEntities, stripTags } from './coolpapers-client'
+import { arxivRssDate, cleanArxivRssAbstract, parseArxivTodayRss } from './arxiv-rss'
 import type { PaperFetchContext } from './arxiv-client'
 import { searchArxivByTitle } from './arxiv-client'
 import { scholarSearchByTitle } from './scholar-client'
@@ -151,7 +152,16 @@ async function readArxivTodayCache(cacheDir: string, date: string): Promise<Arxi
   try {
     const raw = await readFile(arxivTodayCachePath(cacheDir, date), 'utf8')
     const parsed = JSON.parse(raw) as ArxivTodayCache
-    return parsed.date === date && Array.isArray(parsed.items) ? parsed : null
+    if (parsed.date !== date || !Array.isArray(parsed.items)) return null
+    // Older caches kept the raw RSS description and date; tidy them on read.
+    return {
+      ...parsed,
+      items: parsed.items.map((item) => ({
+        ...item,
+        abstract: cleanArxivRssAbstract(item.abstract),
+        publishedAt: arxivRssDate(item.publishedAt)
+      }))
+    }
   } catch {
     return null
   }
@@ -181,19 +191,8 @@ export async function fetchArxivToday(input: {
         timeoutMs: 20_000,
         maxBytes: PAPER_HTML_MAX_BYTES
       })
-      for (const item of parseRssItems(xml).items) {
-        const arxivId = ARXIV_ABS_RE.exec(item.url)?.[1]?.replace(/v\d+$/, '')
-          ?? item.arxivId
-        if (!arxivId || seen.has(arxivId)) continue
-        seen.set(arxivId, {
-          arxivId,
-          title: item.title,
-          authors: [],
-          abstract: item.summary,
-          categories: [category],
-          publishedAt: item.publishedAt,
-          relevance: 0
-        })
+      for (const item of parseArxivTodayRss(xml, category)) {
+        if (!seen.has(item.arxivId)) seen.set(item.arxivId, item)
       }
     }
   } catch (error) {

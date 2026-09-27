@@ -31,6 +31,7 @@ export function useWorkbenchWriteAssistantRuntime({
   const writeWorkspaceRoot = useWriteWorkspaceStore((s) => s.workspaceRoot)
   const workSurface = useWriteWorkspaceStore((s) => s.workSurface)
   const paperView = useWriteWorkspaceStore((s) => paperModeView(s))
+  const researchSessionId = useWriteWorkspaceStore((s) => s.paperResearch.sessionId)
   const activeWriteFilePath = useWriteWorkspaceStore((s) => s.activeFilePath)
   const activeWhiteboardId = useWriteWorkspaceStore((s) => s.activeWhiteboardId)
   const activeWhiteboard = useWriteWorkspaceStore((s) =>
@@ -125,7 +126,8 @@ export function useWorkbenchWriteAssistantRuntime({
       activeFilePath: activeWriteFilePath,
       unitDirs: Object.keys(usePaperStore.getState().unitsByDir),
       entriesByDir: useWriteWorkspaceStore.getState().entriesByDir,
-      view: paperView
+      view: paperView,
+      researchSessionId
     })
     const target = activeWriteThreadForWorkspace(
       writeWorkspaceRoot,
@@ -149,6 +151,7 @@ export function useWorkbenchWriteAssistantRuntime({
     activeWhiteboardId,
     activeWriteFilePath,
     paperView,
+    researchSessionId,
     route,
     runtimeConnection,
     threads,

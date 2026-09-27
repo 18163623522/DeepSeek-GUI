@@ -207,7 +207,7 @@ export function PaperVenuePane({
       {discover.venue ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 border-b border-ds-border-muted pb-3">
           {years.length ? (
-            <div className="flex h-7 max-w-full items-center overflow-x-auto rounded-md border border-ds-border-muted bg-ds-subtle p-0.5">
+            <div className="flex h-7 max-w-full items-center overflow-x-auto rounded-md border border-ds-border-muted bg-ds-subtle p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {years.map((entry) => (
                 <button
                   key={entry.id}

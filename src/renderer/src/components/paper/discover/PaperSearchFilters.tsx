@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { CheckSquare, Loader2, Quote, Send, Square, SquareCheckBig } from 'lucide-react'
+import { PaperImportFolderPicker } from '../import/PaperImportFolderPicker'
 import type {
   PaperSearchHit,
   PaperSearchResponse,
@@ -37,7 +38,7 @@ export function applyPaperSearchFilters(
   })
 }
 
-/** Filter chips + per-source status with click-to-retry (plan P5 errors). */
+/** Filter chips + per-source counts; a failed source's chip retries it. */
 export function PaperSearchFilterBar({
   result,
   filters,
@@ -104,7 +105,7 @@ export function PaperSearchFilterBar({
                 : t(`writePaperSearchSource_${source}`)
             }
             aria-pressed={filters.sources.includes(source)}
-            onClick={() => toggleSource(source)}
+            onClick={() => (failed ? onRetrySource(source) : toggleSource(source))}
             onContextMenu={(event) => {
               event.preventDefault()
               if (failed) onRetrySource(source)
@@ -118,7 +119,7 @@ export function PaperSearchFilterBar({
             }`}
           >
             {t(`writePaperSearchSource_${source}`)}
-            {failed ? <span className="text-[9px]">!</span> : null}
+            <span className="tabular-nums text-ds-faint">{failed ? t('writePaperSearchSourceFailed') : report?.count ?? 0}</span>
           </button>
         )
       })}
@@ -176,7 +177,7 @@ export function PaperSearchSelectionBar({
   t: Translate
 }): ReactElement {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-ds-border-muted bg-ds-subtle/60 px-2 py-1.5">
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-ds-border-muted bg-ds-subtle px-2 py-1.5">
       <button
         type="button"
         onClick={onSelectAll}
@@ -195,6 +196,7 @@ export function PaperSearchSelectionBar({
         {t('writePaperSearchSelected', { count: selectedCount })}
       </span>
       <span className="flex-1" />
+      <PaperImportFolderPicker />
       <button
         type="button"
         onClick={onImport}

@@ -11,13 +11,33 @@ import type { PaperModeView } from './paper-conversation-scope'
  * counts as 'reader'.
  */
 export function paperModeView(
-  state: Pick<WriteWorkspaceState, 'workSurface' | 'editorLayout'>
+  state: Pick<WriteWorkspaceState, 'workSurface' | 'editorLayout'> &
+    Partial<Pick<WriteWorkspaceState, 'paperResearch'>>
 ): PaperModeView {
   if (state.workSurface !== 'papers') return 'library'
   const id = activePaperViewId(state.editorLayout)
   if (id === 'library') return 'library'
+  if (id === 'discover:search' && state.paperResearch?.agentTab) return 'research'
   if (id) return 'discover'
   return 'reader'
+}
+
+/**
+ * True while the focused paper view is the Agent research stage. The stage
+ * hosts the Work assistant conversation itself, so the right assistant rail
+ * steps aside to keep a single composer on screen.
+ */
+export function paperResearchStageActive(
+  state: Pick<WriteWorkspaceState, 'workSurface' | 'editorLayout' | 'paperResearch'>
+): boolean {
+  return paperModeView(state) === 'research'
+}
+
+/** Research session the conversation resource resolves to (null = new research). */
+export function paperResearchSessionId(
+  state: Partial<Pick<WriteWorkspaceState, 'paperResearch'>>
+): string | null {
+  return state.paperResearch?.sessionId ?? null
 }
 
 /** Focused paper view tab id ('library' / 'discover:*') or null when reading. */

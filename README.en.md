@@ -32,7 +32,7 @@
 
 ## What is Kun?
 
-Kun is a local-first workbench that moves AI from answering questions to finishing work. It organizes real work into two primary modes: Code for shipping software, with a Design canvas available inside the same task; and Work for writing, organizing source material, analyzing documents, and producing presentations. Agents can read workspace context, make plans, use tools, change files, run checks, and keep the evidence next to the task.
+Kun is a local-first workbench that moves AI from answering questions to finishing work. It organizes real work into complementary surfaces: Code for shipping software, with a Design canvas available inside the same task; Work for writing, organizing source material, analyzing documents, and producing presentations; and Rooms, a space where multiple agents discuss, split up, execute, and review work through private and group chats. Agents can read workspace context, make plans, use tools, change files, run checks, and keep the evidence next to the task.
 
 The desktop GUI is for seeing, reviewing, and controlling the work. The terminal TUI is for staying in a keyboard-first flow. Both connect to the same local `kun serve` runtime and share threads, goals, plans, approvals, and background work instead of creating disconnected histories.
 
@@ -43,6 +43,7 @@ The desktop GUI is for seeing, reviewing, and controlling the work. The terminal
 | Build, debug, and ship software | Code mode provides project context, file editing, terminal, Git / Worktree, diffs, tests, and review. |
 | Move from a brief to an implementable design | Switch to the Design canvas inside the same Code task to develop prototypes, design systems, and Design → Code context. |
 | Write, organize, and handle everyday tasks | Work mode can edit Markdown, preview, quote, and analyze PDF / Office documents, analyze spreadsheets, and turn outlines into presentations; Office files remain read-only. |
+| Put multiple agents on one request | Rooms provides private and group chats, configurable member teams and collaboration modes, @-mentions, and proposal cards; execution tasks verify, review, and deliver inside isolated Git worktrees. |
 | Automate repeated work | Scheduled tasks, Loops, Hooks, MCP, Skills, and installable extensions. |
 | Choose how to connect a model | Subscriptions, plans, APIs, OpenAI / Anthropic-compatible services, and self-hosted models through Provider settings. |
 
@@ -78,6 +79,15 @@ Clarify the goal → make a plan → execute and collaborate → inspect evidenc
 4. **Deliver with evidence.** Review diffs, tests, reviews, and artifacts; continue, fork, archive, or replan when the requirement changes.
 
 Requirements and plans can live in the project by default, which makes them versionable, reviewable, and easy to resume.
+
+## Rooms: a collaboration space for multiple agents
+
+Rooms sits alongside Code and Work: create a room, pick member agents with models and authorized local repositories, then drive the work through IM-style private or group chats.
+
+- **Multiple collaboration modes.** Peer discussion lets members decide whether they can contribute; coordinator mode assigns work through a coordinator; directed mode addresses selected members or the default responder.
+- **You keep the final call.** Agents can draft proposal cards — pin an agreement, request an execution, add a member — but only you can adopt or dismiss them.
+- **Execution stays isolated and evidenced.** Each task runs in its own Git worktree; deliveries are pinned as immutable versions and reviewed, and declared checks, diffs, logs, and the integration panel stay with the room.
+- **Agreements stay explicit.** Only what you pin becomes a project agreement, frozen by version into each task snapshot, with inspectable history and the ability to disable or restore.
 
 ## Local-first does not mean never connected
 
@@ -142,6 +152,7 @@ npm ci --registry=https://registry.npmmirror.com
 | --- | --- |
 | TUI, commands, and runtime | [docs/kun-tui.en.md](docs/kun-tui.en.md) / [kun/README.md](kun/README.md) |
 | Design workflow | [docs/DESIGN_MODE.md](docs/DESIGN_MODE.md) |
+| Rooms multi-agent collaboration | [docs/rooms.md](docs/rooms.md) |
 | Loops, MCP, and Skills | [docs/workflow-loop.en.md](docs/workflow-loop.en.md) / [docs/project-mcp-skills.md](docs/project-mcp-skills.md) |
 | Extension platform | [docs/extensions/README.en.md](docs/extensions/README.en.md) |
 | Local development | [docs/DEVELOPMENT.en.md](docs/DEVELOPMENT.en.md) |

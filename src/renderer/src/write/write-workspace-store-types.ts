@@ -47,6 +47,13 @@ export type WriteWhiteboardTab = {
  * one discover tab per source. They live in the editor layout like ordinary
  * tabs, persist across restarts, and never own a file.
  */
+export type WritePaperResearchState = {
+  /** The paper search view shows the Agent research stage instead of direct search. */
+  agentTab: boolean
+  /** Selected research session (`rs-…`), or null for the "new research" state. */
+  sessionId: string | null
+}
+
 export type WritePaperViewId =
   | 'library'
   | 'discover:search'
@@ -169,6 +176,8 @@ export type WriteWorkspaceState = {
   paperMode: WritePaperModeSettingsV1
   /** Active Work surface: ordinary docs workspace vs the paper workbench. */
   workSurface: WriteWorkSurface
+  /** Paper search view: Agent research tab state + the selected research session. */
+  paperResearch: WritePaperResearchState
   /** True when the image generation provider is fully configured (enables 生成信息图). */
   imageGenReady: boolean
   /** True when the primary chat provider is configured (enables 生成交互原型). */
@@ -226,6 +235,7 @@ export type WriteWorkspaceState = {
   recentEdits: WriteRecentEdit[]
   loadWriteSettings: () => Promise<void>
   setWorkSurface: (surface: WriteWorkSurface) => void
+  setPaperResearch: (patch: Partial<WritePaperResearchState>) => void
   selectWriteWorkspace: (workspaceRoot: string) => Promise<void>
   addWriteWorkspace: (workspaceRoot: string) => Promise<void>
   removeWriteWorkspace: (workspaceRoot: string) => Promise<void>

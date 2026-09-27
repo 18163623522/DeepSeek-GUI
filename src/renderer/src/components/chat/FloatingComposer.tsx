@@ -158,7 +158,7 @@ export function FloatingComposer({
   setInput,
   mode,
   setMode,
-  taskSurface, taskSurfaceLocked = false, emptyTaskLayout = false, designTaskProfile,
+  taskSurface, taskSurfaceLocked = false, emptyTaskLayout = false, designTaskProfile, placeholderOverride,
   autoPlanBuildEnabled = false,
   designProfileLocked = false,
   imageGenerationEnabled, imageGenerationAvailable = false, imageGenerationReason,
@@ -502,7 +502,7 @@ export function FloatingComposer({
               ? t('composerAutoPlanBuildPlaceholder')
             : mode === 'plan'
               ? t('composerPlanPlaceholder')
-              : emptyTaskLayout
+              : placeholderOverride ? placeholderOverride : emptyTaskLayout
                 ? t('unifiedTaskComposerPlaceholder')
               : hasActiveThread
                 ? t('placeholder')

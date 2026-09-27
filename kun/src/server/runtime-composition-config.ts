@@ -442,7 +442,8 @@ export function createRuntimeConfigController(
 	      ...buildPaperSearchToolProvider({
 	        proxyUrl: () => activeOptions.modelProxyUrl,
 	        enabledSources: () => activeOptions.capabilities?.paperSearch?.enabledSources,
-	        credentials: () => resolvePaperSearchCredentials(activeOptions.capabilities?.paperSearch)
+	        credentials: () => resolvePaperSearchCredentials(activeOptions.capabilities?.paperSearch),
+	        parentThreadId: async (threadId) => (await services.model.core.threadStore.get(threadId))?.parentThreadId
 	      })
             ])
             // GUI/TUI own the live Registry through revisioned writes. Hot apply is
