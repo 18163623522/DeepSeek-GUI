@@ -22,7 +22,7 @@ export const CONTEXT_WINDOWS_NOTE_TOTAL_MAX_BYTES = 2 * 1024 * 1024
 /** Response output cap in tokens, combined with min(existing tool token cap, this). */
 export const CONTEXT_WINDOWS_OUTPUT_MAX_TOKENS = 4096
 
-export const ContextWindowModeSchema = z.enum(['summary', 'windows'])
+export const ContextWindowModeSchema = z.enum(['summary', 'model_compact', 'windows'])
 export type ContextWindowMode = z.infer<typeof ContextWindowModeSchema>
 
 /**

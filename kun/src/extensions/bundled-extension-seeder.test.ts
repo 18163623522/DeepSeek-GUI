@@ -343,6 +343,33 @@ describe('bundled extension seeding', () => {
     })
   })
 
+  it('keeps a package installed before Windows lowercased the data directory', async () => {
+    if (process.platform !== 'win32') return
+    const harness = await createHarness()
+    await writeBundle(harness, '1.0.0', [])
+    await seedBundledExtensions(seedOptions(harness))
+
+    const registry = JSON.parse(await readFile(harness.paths.registryFile, 'utf8')) as {
+      extensions: Record<string, { versions: Record<string, { packagePath: string }> }>
+    }
+    const installed = registry.extensions['acme.demo']?.versions['1.0.0']
+    if (installed === undefined) throw new Error('expected seeded package')
+    installed.packagePath = installed.packagePath.toUpperCase()
+    await writeFile(harness.paths.registryFile, `${JSON.stringify(registry, null, 2)}\n`)
+
+    const paths = new ExtensionPaths({
+      packageRoot: harness.paths.packageRoot.toLowerCase(),
+      dataRoot: harness.paths.dataRoot.toLowerCase()
+    })
+    const reopened = new ExtensionRegistry(paths)
+    const manager = new ExtensionPackageManager(paths, reopened, { compatibility })
+    await manager.recover()
+
+    const expected = paths.packageVersion('acme.demo', '1.0.0')
+    expect((await reopened.get('acme.demo'))?.versions['1.0.0']?.packagePath).toBe(expected)
+    await expect(readdir(expected)).resolves.toContain('kun-extension.json')
+  })
+
   it('rejects a catalog digest mismatch before mutating the registry', async () => {
     const harness = await createHarness()
     await writeBundle(harness, '1.0.0', [])

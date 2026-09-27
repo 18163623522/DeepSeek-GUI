@@ -50,6 +50,17 @@ describe('exclusiveNewContextBatchError', () => {
     expect(error).toBeInstanceOf(Error)
     expect(error!.message).toContain('on its own')
   })
+
+  it('rejects mixed compact_context batches and allows a lone call', () => {
+    expect(exclusiveNewContextBatchError([{ toolName: 'compact_context' }])).toBeNull()
+    const error = exclusiveNewContextBatchError([
+      { toolName: 'read' },
+      { toolName: 'compact_context' }
+    ])
+    expect(error).toBeInstanceOf(Error)
+    expect(error!.message).toContain('compact_context')
+    expect(error!.message).toContain('on its own')
+  })
 })
 
 describe('ContextWindowTransitionCoordinator', () => {

@@ -97,7 +97,7 @@ export function LaboratorySettingsSection({ ctx }: { ctx: Record<string, any> })
         ariaLabel={t('agentsQuickLaboratory')}
         contentSized
         items={[
-          { id: 'contextWindow', label: t('labContextWindowTitle'), icon: AppWindow },
+          { id: 'contextWindow', label: t('labContextCompressionTitle'), icon: AppWindow },
           { id: 'visualization', label: t('labConversationVisualizationTitle'), icon: Waypoints },
           { id: 'autoPlanBuild', label: t('labAutoPlanBuildTitle'), icon: Sparkles },
           { id: 'computer', label: t('computerUseTitle'), icon: Monitor },
@@ -132,8 +132,18 @@ export function LaboratorySettingsSection({ ctx }: { ctx: Record<string, any> })
       >
         <ContextWindowSettingsPanel
           t={t}
+          modelInitiatedCompactionEnabled={contextCompaction.modelInitiatedCompactionEnabled === true}
           windowModeEnabled={contextCompaction.windowModeEnabled === true}
-          onChange={(windowModeEnabled) => updateKun({
+          onModelInitiatedChange={(modelInitiatedCompactionEnabled) => updateKun({
+            contextCompaction: {
+              ...contextCompaction,
+              modelInitiatedCompactionEnabled,
+              windowModeEnabled: modelInitiatedCompactionEnabled
+                ? contextCompaction.windowModeEnabled === true
+                : false
+            }
+          })}
+          onWindowModeChange={(windowModeEnabled) => updateKun({
             contextCompaction: {
               ...contextCompaction,
               windowModeEnabled

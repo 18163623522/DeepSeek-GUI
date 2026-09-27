@@ -440,4 +440,65 @@ describe('ContextWindowStrategyCoordinator', () => {
     expect(summarySpy).toHaveBeenCalledTimes(1)
     expect(outcome as HistoryCompactionOutcome).toMatchObject({ triggered: false })
   })
+
+  it('emits model_compact notices without auto-compacting at the soft threshold', async () => {
+    const compactModes = new ContextWindowTurnModes(() => 'model_compact')
+    const compactStrategy = new ContextWindowStrategyCoordinator({
+      summary,
+      mode: (threadId, turnId) => compactModes.modeFor(threadId, turnId),
+      budget: new ContextWindowBudget({ nowIso: () => '2026-09-14T00:00:00.000Z' }),
+      capacityTokens: () => CAPACITY,
+      sessionStore
+    })
+    compactModes.freeze({ threadId: 'threadA', turnId: 'turn-1' })
+    const outcome = await compactStrategy.compactIfNeeded(compactInput({
+      requestOverheadTokens: 10_000,
+      requestInputTokens: 60_000,
+      outputBudgetTokens: 0
+    }))
+    expect(summarySpy).not.toHaveBeenCalled()
+    expect(outcome.compacted).toBe(false)
+    expect(outcome.notice).toContain('60% used')
+  })
+
+  it('names compact_context in the model_compact 75% notice', async () => {
+    const compactModes = new ContextWindowTurnModes(() => 'model_compact')
+    const compactStrategy = new ContextWindowStrategyCoordinator({
+      summary,
+      mode: (threadId, turnId) => compactModes.modeFor(threadId, turnId),
+      budget: new ContextWindowBudget({ nowIso: () => '2026-09-14T00:00:00.000Z' }),
+      capacityTokens: () => CAPACITY,
+      sessionStore
+    })
+    compactModes.freeze({ threadId: 'threadA', turnId: 'turn-1' })
+    const outcome = await compactStrategy.compactIfNeeded(compactInput({
+      requestOverheadTokens: 10_000,
+      requestInputTokens: 80_000,
+      outputBudgetTokens: 0
+    }))
+    expect(summarySpy).not.toHaveBeenCalled()
+    expect(outcome.notice).toContain('compact_context')
+    expect(outcome.notice).not.toContain('new_context')
+  })
+
+  it('force-compacts through the summary path on model_compact hard pressure', async () => {
+    const compactModes = new ContextWindowTurnModes(() => 'model_compact')
+    const compactStrategy = new ContextWindowStrategyCoordinator({
+      summary,
+      mode: (threadId, turnId) => compactModes.modeFor(threadId, turnId),
+      budget: new ContextWindowBudget({ nowIso: () => '2026-09-14T00:00:00.000Z' }),
+      capacityTokens: () => CAPACITY,
+      sessionStore
+    })
+    compactModes.freeze({ threadId: 'threadA', turnId: 'turn-1' })
+    await compactStrategy.compactIfNeeded(compactInput({
+      requestOverheadTokens: 10_000,
+      requestInputTokens: HARD_CAP + 1,
+      outputBudgetTokens: 1_000
+    }))
+    expect(summarySpy).toHaveBeenCalledTimes(1)
+    expect(summarySpy.mock.calls[0]?.[0]).toMatchObject({
+      force: { reason: 'model_compact hard pressure' }
+    })
+  })
 })

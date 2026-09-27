@@ -79,6 +79,7 @@ describe('Kun context compaction window mode toggle', () => {
   it('normalizes missing or non-boolean window mode to disabled', () => {
     const missing = normalizeAppSettings(settingsWithCompaction({}))
     expect(missing.agents.kun.contextCompaction.windowModeEnabled).toBe(false)
+    expect(missing.agents.kun.contextCompaction.modelInitiatedCompactionEnabled).toBe(false)
 
     const illegal = normalizeAppSettings(settingsWithCompaction({
       windowModeEnabled: 'yes' as unknown as boolean
@@ -87,9 +88,13 @@ describe('Kun context compaction window mode toggle', () => {
   })
 
   it('round-trips the toggle without touching summary parameters', () => {
-    const enabled = normalizeAppSettings(settingsWithCompaction({ windowModeEnabled: true }))
+    const enabled = normalizeAppSettings(settingsWithCompaction({
+      modelInitiatedCompactionEnabled: true,
+      windowModeEnabled: true
+    }))
     const compaction = enabled.agents.kun.contextCompaction
     expect(compaction.windowModeEnabled).toBe(true)
+    expect(compaction.modelInitiatedCompactionEnabled).toBe(true)
     expect(compaction.summaryMode).toBe('model')
     expect(compaction.summaryTimeoutMs).toBe(15_000)
     expect(compaction.summaryMaxTokens).toBe(2_048)
@@ -98,12 +103,69 @@ describe('Kun context compaction window mode toggle', () => {
     expect(compaction.defaultHardThreshold).toBe(217_600)
 
     const merged = mergeKunRuntimeSettings(defaultKunRuntimeSettings(), {
-      contextCompaction: { windowModeEnabled: true }
+      contextCompaction: {
+        modelInitiatedCompactionEnabled: true,
+        windowModeEnabled: true
+      }
     })
     expect(merged.contextCompaction.windowModeEnabled).toBe(true)
     expect(merged.contextCompaction.summaryMaxTokens).toBe(2_048)
 
     const disabled = normalizeAppSettings(settingsWithCompaction({ windowModeEnabled: false }))
     expect(disabled.agents.kun.contextCompaction.windowModeEnabled).toBe(false)
+  })
+
+  it('migrates a stored window-mode install onto the parent switch', () => {
+    const input = settingsWithCompaction({ windowModeEnabled: true })
+    delete (input.agents.kun.contextCompaction as { modelInitiatedCompactionEnabled?: boolean })
+      .modelInitiatedCompactionEnabled
+    const migrated = normalizeAppSettings(input)
+    expect(migrated.agents.kun.contextCompaction.windowModeEnabled).toBe(true)
+    expect(migrated.agents.kun.contextCompaction.modelInitiatedCompactionEnabled).toBe(true)
+  })
+
+  it('clears windowed context when the parent switch is off', () => {
+    const normalized = normalizeAppSettings(settingsWithCompaction({
+      modelInitiatedCompactionEnabled: false,
+      windowModeEnabled: true
+    }))
+    expect(normalized.agents.kun.contextCompaction.modelInitiatedCompactionEnabled).toBe(false)
+    expect(normalized.agents.kun.contextCompaction.windowModeEnabled).toBe(false)
+
+    const merged = mergeKunRuntimeSettings(defaultKunRuntimeSettings(), {
+      contextCompaction: {
+        modelInitiatedCompactionEnabled: false,
+        windowModeEnabled: true
+      }
+    })
+    expect(merged.contextCompaction.modelInitiatedCompactionEnabled).toBe(false)
+    expect(merged.contextCompaction.windowModeEnabled).toBe(false)
+
+    const bothOn = {
+      ...defaultKunRuntimeSettings(),
+      contextCompaction: {
+        ...defaultKunRuntimeSettings().contextCompaction,
+        modelInitiatedCompactionEnabled: true,
+        windowModeEnabled: true
+      }
+    }
+    const parentOff = mergeKunRuntimeSettings(bothOn, {
+      contextCompaction: { modelInitiatedCompactionEnabled: false }
+    })
+    expect(parentOff.contextCompaction.modelInitiatedCompactionEnabled).toBe(false)
+    expect(parentOff.contextCompaction.windowModeEnabled).toBe(false)
+  })
+
+  it('round-trips the parent model-initiated switch', () => {
+    const enabled = normalizeAppSettings(settingsWithCompaction({
+      modelInitiatedCompactionEnabled: true
+    }))
+    expect(enabled.agents.kun.contextCompaction.modelInitiatedCompactionEnabled).toBe(true)
+    expect(enabled.agents.kun.contextCompaction.windowModeEnabled).toBe(false)
+
+    const merged = mergeKunRuntimeSettings(defaultKunRuntimeSettings(), {
+      contextCompaction: { modelInitiatedCompactionEnabled: true }
+    })
+    expect(merged.contextCompaction.modelInitiatedCompactionEnabled).toBe(true)
   })
 })

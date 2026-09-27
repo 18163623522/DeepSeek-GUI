@@ -346,6 +346,7 @@ export async function createRuntimeAgentComposition(
 	    contextCompaction: core.activeOptions.contextCompaction,
 	    contextWindowModes: core.contextWindowModes,
 	    contextWindowTransition: core.contextWindowTransition,
+	    contextCompact: core.contextCompact,
 	    contextWindowBudget: core.contextWindowBudget,
 	    contextWindowStateRestore: core.contextWindowStateRestore,
 	    ...(core.activeOptions.roles ? { roles: core.activeOptions.roles } : {}),

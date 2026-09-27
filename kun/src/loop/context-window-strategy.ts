@@ -39,10 +39,11 @@ export type ContextWindowStrategyDeps = {
  * Single strategy entry consulted by every automatic compaction path
  * (auto preflight, send-boundary fallback, memory-pressure sweep, provider
  * overflow recovery). Summary mode delegates unchanged to
- * HistoryCompactionService. Window mode NEVER calls the summary model: soft
- * pressure produces a deduped budget notice, hard pressure performs exactly
- * one deterministic no-summary window transition, and a request whose
- * non-history portion cannot fit fails only the current turn through the
+ * HistoryCompactionService. Window and model_compact modes never auto-compact
+ * at the 192k soft threshold: soft pressure produces a deduped budget notice.
+ * Hard pressure in windows performs one no-summary transition; in
+ * model_compact it force-runs the existing summary compact path. A request
+ * whose non-history portion cannot fit fails only the current turn through the
  * `unrecoverable` outcome marker — never a silent summary fallback.
  */
 export class ContextWindowStrategyCoordinator implements CompactionDispatch {
@@ -50,10 +51,10 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
 
   async compactIfNeeded(input: CompactIfNeededInput): Promise<HistoryCompactionOutcome> {
     const mode = this.deps.mode?.(input.threadId, input.turnId) ?? 'summary'
-    if (mode !== 'windows') {
+    if (mode !== 'windows' && mode !== 'model_compact') {
       return this.deps.summary.compactIfNeeded(input)
     }
-    return this.compactWindows(input)
+    return this.compactPressure(input, mode)
   }
 
   private capacityFor(input: CompactIfNeededInput): number {
@@ -61,7 +62,11 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
     return capacity !== undefined && capacity > 0 ? Math.floor(capacity) : DEFAULT_CAPACITY
   }
 
-  private budgetState(input: CompactIfNeededInput, capacity: number): WindowBudgetState | undefined {
+  private budgetState(
+    input: CompactIfNeededInput,
+    capacity: number,
+    mode: ContextWindowMode
+  ): WindowBudgetState | undefined {
     if (!this.deps.budget) return undefined
     const window = this.deps.window?.(input.threadId)
     const windowId = window?.windowId ?? 'win-0'
@@ -72,7 +77,7 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
       }
       return this.deps.budget.stateFor(input.threadId, windowId)
     }
-    if (!window) {
+    if (!window && mode === 'windows') {
       // First enable (window 0): establish the identity in the modes registry
       // so covered-threshold marks can be persisted and survive restart.
       this.deps.establishWindow?.(input.threadId, { windowId, windowSeq: 0 })
@@ -97,7 +102,10 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
     return created
   }
 
-  private async compactWindows(input: CompactIfNeededInput): Promise<HistoryCompactionOutcome> {
+  private async compactPressure(
+    input: CompactIfNeededInput,
+    mode: 'windows' | 'model_compact'
+  ): Promise<HistoryCompactionOutcome> {
     await this.deps.stateRestore?.restore(input.threadId)
     const capacity = this.capacityFor(input)
     // The caller's request hard cap is authoritative too: without model
@@ -112,7 +120,7 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
     const overhead = Math.max(0, Math.floor(input.requestOverheadTokens ?? 0))
     const estimatedInput = Math.max(0, Math.floor(input.requestInputTokens ?? 0))
     const outputReserve = Math.max(0, Math.floor(input.outputBudgetTokens ?? 0))
-    const state = this.budgetState(input, capacity)
+    const state = this.budgetState(input, capacity, mode)
     // Restore may discover a committed boundary whose initialization append
     // was interrupted. Build the initialization only after the current model
     // capacity and persisted threshold marks are hydrated, then refresh the
@@ -139,9 +147,14 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
       }
     }
 
-    // Hard pressure (or forced overflow recovery): exactly one deterministic
-    // no-summary transition, then the caller rebuilds the request.
+    // Hard pressure (or forced overflow recovery).
     if (input.force !== undefined || (estimatedInput > 0 && estimatedInput + outputReserve > hardCap)) {
+      if (mode === 'model_compact') {
+        return this.deps.summary.compactIfNeeded({
+          ...input,
+          force: input.force ?? { reason: 'model_compact hard pressure' }
+        })
+      }
       const result = await this.transitionWindow(input)
       if (result) return result
       return {
@@ -157,7 +170,8 @@ export class ContextWindowStrategyCoordinator implements CompactionDispatch {
     if (state) {
       const notice = this.deps.budget!.thresholdNotice(state, {
         estimatedInputTokens: estimatedInput,
-        outputReserveTokens: outputReserve
+        outputReserveTokens: outputReserve,
+        actionHint: mode === 'model_compact' ? 'compact_context' : 'new_context'
       })
       if (notice.notice) {
         await this.deps.stateRestore?.persist(input.threadId, 'threshold-notice')

@@ -1,4 +1,4 @@
-import { isAbsolute } from 'node:path'
+import { isAbsolute, win32 } from 'node:path'
 import {
   ExtensionRegistrySchema as PublicExtensionRegistrySchema,
   type ExtensionRegistry as PublicExtensionRegistry
@@ -101,6 +101,15 @@ export function assertVersionRecord(
       version: record.version
     })
   }
+  // Sessions canonicalize Windows data directories to lowercase. Packages
+  // installed by older builds still name that same directory with its original
+  // casing. Adopt the current spelling so startup recovery keeps the package.
+  if (paths !== undefined && typeof record.packagePath === 'string') {
+    record.packagePath = canonicalizeInstalledPackagePath(
+      record.packagePath,
+      paths.packageVersion(extensionId, record.version)
+    )
+  }
   if (
     !isAbsolute(record.packagePath) ||
     (paths !== undefined && record.packagePath !== paths.packageVersion(extensionId, record.version)) ||
@@ -132,6 +141,29 @@ export function assertVersionRecord(
       })
     }
   }
+}
+
+/**
+ * Accept a Windows spelling difference for the exact installed package
+ * directory. A different directory, including one reached with `..`, stays
+ * unchanged so the strict equality check still rejects it.
+ */
+export function canonicalizeInstalledPackagePath(
+  packagePath: string,
+  expected: string,
+  platform: NodeJS.Platform = process.platform
+): string {
+  if (packagePath === expected || platform !== 'win32') return packagePath
+  if (!win32.isAbsolute(packagePath) || !win32.isAbsolute(expected)) return packagePath
+  if (windowsPackagePathKey(packagePath) !== windowsPackagePathKey(expected)) return packagePath
+  return expected
+}
+
+function windowsPackagePathKey(value: string): string {
+  let resolved = win32.resolve(value)
+  if (resolved.startsWith('\\\\?\\UNC\\')) resolved = `\\\\${resolved.slice(8)}`
+  else if (resolved.startsWith('\\\\?\\')) resolved = resolved.slice(4)
+  return resolved.toLowerCase()
 }
 
 /**

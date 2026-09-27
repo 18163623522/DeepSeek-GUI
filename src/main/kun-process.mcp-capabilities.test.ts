@@ -9,6 +9,7 @@ import {
   DEFAULT_LOG_RETENTION_DAYS,
   defaultDesignSettings,
   defaultKeyboardShortcuts,
+  defaultKunContextCompactionSettings,
   defaultKunRuntimeSettings,
   defaultModelProviderSettings,
   defaultScheduleSettings,
@@ -241,10 +242,9 @@ describe('syncGuiManagedKunConfig', () => {
           sqlitePath: '/tmp/kun-index.sqlite3'
         },
         contextCompaction: {
+          ...defaultKunContextCompactionSettings(),
           defaultSoftThreshold: 32000,
           defaultHardThreshold: 64000,
-          summaryMode: 'model',
-          windowModeEnabled: false,
           summaryTimeoutMs: 30000,
           summaryMaxTokens: 1600,
           summaryInputMaxBytes: 131072

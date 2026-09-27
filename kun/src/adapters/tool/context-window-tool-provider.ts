@@ -1,6 +1,7 @@
 import {
   contextWindowToolSpecByName,
   CONTEXT_WINDOW_TOOL_NAMES,
+  type ContextWindowMode,
   type ContextWindowToolName
 } from '../../contracts/context-windows.js'
 import type { ToolHostContext } from '../../ports/tool-host.js'
@@ -18,7 +19,7 @@ import type { LocalTool } from './local-tool-host-types.js'
  */
 export type ContextWindowModeSource = (
   context: ToolHostContext
-) => 'summary' | 'windows'
+) => ContextWindowMode
 
 export type NewContextTransition = (
   context: ToolHostContext,

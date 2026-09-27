@@ -102,7 +102,8 @@ export type TurnServiceDeps = {
   contextWindows?: ContextWindowService
   /**
    * Resolve effective model capabilities for the route a turn would use.
-   * Window-mode admission fails closed when the route cannot execute tools.
+   * Window-mode and model-initiated compact admission fail closed when the
+   * route cannot execute tools.
    */
   modelCapabilities?: (model: string, providerId?: string) => ModelCapabilityMetadata
   /** Resolve durable Graph ownership without coupling TurnService to the Graph store. */

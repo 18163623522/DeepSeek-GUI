@@ -177,21 +177,27 @@ async startTurn(this: TurnService, input: {
           turnId,
           parentThreadId: thread.parentThreadId ?? null
         })
-        // Window-mode admission is fail-closed on route capability: a route
-        // that cannot execute tools can never run new_context or the history
-        // tools, so admitting it could strand the task mid-window. Reject
+        // Window-mode and model-initiated compact admission are fail-closed
+        // on route capability: a route that cannot execute tools can never
+        // run new_context, compact_context, or the history tools. Reject
         // BEFORE the turn starts: no context clear, no strategy change, and
         // summary mode stays usable for later turns on other routes.
         const acceptedMode = this['deps'].contextWindowModes
           ?.snapshot(input.threadId, turnId).mode
-        if (acceptedMode === 'windows' && this['deps'].modelCapabilities) {
+        if (
+          (acceptedMode === 'windows' || acceptedMode === 'model_compact') &&
+          this['deps'].modelCapabilities
+        ) {
           const routeModel = input.request.model ?? thread.model
           const routeProviderId = input.request.providerId ?? thread.providerId ?? undefined
           const capabilities = this['deps'].modelCapabilities(routeModel, routeProviderId)
           if (!capabilities.supportsToolCalling) {
+            const kind = acceptedMode === 'windows'
+              ? 'window-mode context'
+              : 'model-initiated context compression'
             throw new TurnConflictError(
-              `window-mode context requires a route with tool support, but ${JSON.stringify(routeModel)} ` +
-              'cannot execute tools; switch model/provider or disable window mode for this thread'
+              `${kind} requires a route with tool support, but ${JSON.stringify(routeModel)} ` +
+              'cannot execute tools; switch model/provider or disable this setting for this thread'
             )
           }
         }

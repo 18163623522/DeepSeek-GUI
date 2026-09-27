@@ -42,6 +42,7 @@ import {
   ContextWindowNotes,
   ContextWindowTurnModes,
   ContextWindowTransitionCoordinator,
+  ContextCompactCoordinator,
   ContextWindowBudget,
   ContextWindowStateRestore,
   FileContextWindowStateStore,
@@ -195,6 +196,7 @@ export async function createRuntimeCore(
       countOrdinaryWorkItems(await sessionStore.loadItems(threadId)),
     committedOperation: (threadId, operationId) => contextWindows.hasWindowOperation(threadId, operationId)
   })
+  const contextCompact = new ContextCompactCoordinator({ sessionStore })
   // Late binding: restart restore completes the durable window initialization
   // for the restored checkpoint before any model request is served.
   contextWindowStateRestore.ensureInitialization = (checkpoint) =>
@@ -388,6 +390,7 @@ export async function createRuntimeCore(
     contextWindows,
     contextWindowModes,
     contextWindowTransition,
+    contextCompact,
     contextWindowBudget,
     contextWindowStateRestore,
     events,

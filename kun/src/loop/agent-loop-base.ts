@@ -111,6 +111,7 @@ export abstract class AgentLoopBase {
       clearReadTracker: (threadId?: string) => opts.toolHost.clearReadTracker?.(threadId),
       rewriteThreadItemsFromSession: (threadId) => this.threadItems.syncFromSession(threadId)
     })
+    opts.contextCompact?.bind(summaryCompaction)
     // Every automatic compaction entry (auto preflight, send-boundary,
     // memory-pressure, overflow recovery) funnels through this dispatch so the
     // accepted turn mode picks the strategy exactly once.

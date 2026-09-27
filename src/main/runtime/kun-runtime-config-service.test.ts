@@ -286,6 +286,7 @@ describe('Kun runtime config service', () => {
         ...defaults,
         contextCompaction: {
           ...defaults.contextCompaction,
+          modelInitiatedCompactionEnabled: enabled,
           windowModeEnabled: enabled
         }
       }
@@ -296,6 +297,7 @@ describe('Kun runtime config service', () => {
       })
       const config = await syncGuiManagedKunConfig(dataDir, runtime)
       expect(config.contextCompaction?.windowModeEnabled).toBe(enabled)
+      expect(config.contextCompaction?.modelInitiatedCompactionEnabled).toBe(enabled)
       expect(config.contextCompaction?.summaryMaxTokens).toBe(
         defaults.contextCompaction.summaryMaxTokens
       )
@@ -305,10 +307,12 @@ describe('Kun runtime config service', () => {
     try {
       const enabledBody = await project(true)
       expect(enabledBody.contextCompaction?.windowModeEnabled).toBe(true)
+      expect(enabledBody.contextCompaction?.modelInitiatedCompactionEnabled).toBe(true)
       expect(enabledBody.contextCompaction?.summaryMaxTokens).toBe(2_048)
 
       const disabledBody = await project(false)
       expect(disabledBody.contextCompaction?.windowModeEnabled).toBe(false)
+      expect(disabledBody.contextCompaction?.modelInitiatedCompactionEnabled).toBe(false)
     } finally {
       await rm(dataDir, { recursive: true, force: true })
     }
