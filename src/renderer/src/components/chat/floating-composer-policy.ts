@@ -172,6 +172,8 @@ export type FloatingComposerProps = {
   taskSurfaceLocked?: boolean
   /** Gives an empty conversation a larger composer; task intent remains in its toolbar. */
   emptyTaskLayout?: boolean
+  /** Surface-specific idle placeholder (runtime, queue and plan hints still win). */
+  placeholderOverride?: string
   /** GUI-only Laboratory availability for Automatic (plan + build). */
   autoPlanBuildEnabled?: boolean
   designTaskProfile?: DesignTaskComposerProfile

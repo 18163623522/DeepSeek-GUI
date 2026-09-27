@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
-import { Loader2, PanelLeft, PanelRight, Square } from 'lucide-react'
+import { Archive, Loader2, PanelRight, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ChatBlock } from '../../../agent/types'
 import { useChatStore } from '../../../store/chat-store'
@@ -7,10 +7,7 @@ import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
 import { usePaperStore } from '../../../write/paper/paper-store'
 import { buildResearchPool } from '../../../paper/paper-research-pool'
-import {
-  listResearchSessions,
-  readLastResearchSession
-} from '../../../paper/paper-research-sessions'
+import { listResearchSessions, readLastResearchSession } from '../../../paper/paper-research-sessions'
 import {
   selectPaperResearchSession,
   startPaperResearch,
@@ -20,24 +17,22 @@ import { useWriteAssistantStage } from '../../write/WriteAssistantStageContext'
 import { PaperSearchTabs } from '../discover/PaperSearchScope'
 import { PaperResearchEmpty } from './PaperResearchEmpty'
 import { PaperResearchPool } from './PaperResearchPool'
-import { PaperResearchSessionList } from './PaperResearchSessionList'
 import { PaperResearchStage } from './PaperResearchStage'
 
-const PANELS_KEY = 'kun.paper.research.panels'
+const POOL_KEY = 'kun.paper.research.poolOpen'
 const NO_BLOCKS: ChatBlock[] = []
 
-function readPanels(): { sessions: boolean; pool: boolean } {
+function readPoolOpen(): boolean {
   try {
-    const raw = JSON.parse(window.localStorage.getItem(PANELS_KEY) ?? '{}') as { sessions?: unknown; pool?: unknown }
-    return { sessions: raw.sessions !== false, pool: raw.pool !== false }
+    return window.localStorage.getItem(POOL_KEY) !== '0'
   } catch {
-    return { sessions: true, pool: true }
+    return true
   }
 }
 
-function writePanels(panels: { sessions: boolean; pool: boolean }): void {
+function writePoolOpen(open: boolean): void {
   try {
-    window.localStorage.setItem(PANELS_KEY, JSON.stringify(panels))
+    window.localStorage.setItem(POOL_KEY, open ? '1' : '0')
   } catch {
     // Panel memory is a convenience only.
   }
@@ -57,9 +52,10 @@ function useElapsed(since: string | undefined, running: boolean): string {
 }
 
 /**
- * Agent research stage (paper search → Agent tab): research sessions on the
- * left, the session's Work conversation in the center (Code-style timeline +
- * composer), and the deduplicated paper pool on the right.
+ * Agent research stage (paper search → Agent tab), laid out like a Code
+ * conversation: a slim header, the session's Work conversation in the
+ * center and the paper pool on the right. Sessions live in the sidebar
+ * under 论文搜索.
  */
 export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }): ReactElement {
   const { t } = useTranslation('common')
@@ -68,7 +64,7 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
   const sessionId = useWriteWorkspaceStore((s) => s.paperResearch.sessionId)
   const threads = useChatStore((s) => s.threads)
   const draft = usePaperModeStore((s) => s.discover.researchDraft)
-  const [panels, setPanels] = useState(readPanels)
+  const [poolOpen, setPoolOpen] = useState(readPoolOpen)
   const [starting, setStarting] = useState(false)
   const stageRef = useRef<HTMLDivElement | null>(null)
   const restoredFor = useRef<string | null>(null)
@@ -83,7 +79,7 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
   const elapsed = useElapsed(lastUserAt, running)
 
   // Reopen the library's last session once per library, unless the user is
-  // already on a session or deliberately started a new one.
+  // already on a session or arrived with a hand-off draft.
   useEffect(() => {
     if (restoredFor.current === libraryRoot || !sessions.length) return
     restoredFor.current = libraryRoot
@@ -91,12 +87,6 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
     const last = readLastResearchSession(libraryRoot)
     if (last && sessions.some((session) => session.sessionId === last)) selectPaperResearchSession(last)
   }, [libraryRoot, sessions, sessionId, draft])
-
-  const togglePanel = (key: 'sessions' | 'pool'): void => {
-    const next = { ...panels, [key]: !panels[key] }
-    setPanels(next)
-    writePanels(next)
-  }
 
   const start = (request: PaperResearchRequest): void => {
     setStarting(true)
@@ -112,59 +102,75 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
     })
   }
 
+  const archiveSession = (): void => {
+    if (!activeSession) return
+    void useChatStore.getState().archiveThread(activeSession.threadId, true)
+      .then(() => selectPaperResearchSession(null))
+      .catch(() => undefined)
+  }
+
   const focusBlock = (blockId: string): void => {
     const target = stageRef.current?.querySelector(`[data-block-id="${CSS.escape(blockId)}"]`)
     target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  const showPool = Boolean(activeSession && bound && poolOpen)
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-ds-border-muted px-3">
-        <button
-          type="button"
-          onClick={() => togglePanel('sessions')}
-          aria-pressed={panels.sessions}
-          aria-label={t('paperResearchSessions')}
-          title={t('paperResearchSessions')}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
-        >
-          <PanelLeft className="h-4 w-4" strokeWidth={1.8} />
-        </button>
+      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-ds-border-muted px-4">
         <PaperSearchTabs tab="agent" compact onChange={(tab) => tab === 'direct' && onShowDirect()} />
-        <div className="min-w-0 flex-1 px-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {activeSession ? (
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="min-w-0 truncate text-[13px] font-semibold text-ds-ink">{activeSession.title}</span>
-              <span className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-px text-[11px] ${
-                running ? 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300' : 'bg-ds-subtle text-ds-muted'
-              }`}>
-                {running ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                {running ? t('paperResearchStatusRunning') : t('paperResearchStatusIdle')}
+            <>
+              <span className="min-w-0 truncate text-[13px] font-medium text-ds-ink" title={activeSession.title}>
+                {activeSession.title}
               </span>
-              {elapsed ? <span className="shrink-0 text-[11.5px] tabular-nums text-ds-faint">{elapsed}</span> : null}
-            </div>
-          ) : (
-            <span className="text-[13px] font-medium text-ds-muted">{t('paperResearchNew')}</span>
-          )}
+              {running ? (
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11.5px] text-[var(--ds-accent)]">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {t('paperResearchStatusRunning')}
+                  {elapsed ? <span className="tabular-nums text-ds-faint">{elapsed}</span> : null}
+                </span>
+              ) : null}
+            </>
+          ) : null}
         </div>
         {running ? (
           <button
             type="button"
             onClick={() => assistant?.onInterrupt()}
-            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-ds-border-muted px-2 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
           >
             <Square className="h-3 w-3" strokeWidth={2.2} />
             {t('paperResearchStop')}
           </button>
         ) : null}
+        {activeSession && !running ? (
+          <button
+            type="button"
+            onClick={archiveSession}
+            aria-label={t('paperResearchArchive')}
+            title={t('paperResearchArchive')}
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+          >
+            <Archive className="h-3.5 w-3.5" strokeWidth={1.8} />
+          </button>
+        ) : null}
         {activeSession ? (
           <button
             type="button"
-            onClick={() => togglePanel('pool')}
-            aria-pressed={panels.pool}
-            aria-label={t('paperResearchPoolTitle')}
+            onClick={() => {
+              setPoolOpen((open) => {
+                writePoolOpen(!open)
+                return !open
+              })
+            }}
+            aria-pressed={poolOpen}
             title={t('paperResearchPoolTitle')}
-            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+            className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-[12px] transition hover:bg-ds-hover hover:text-ds-ink ${
+              poolOpen ? 'text-ds-ink' : 'text-ds-muted'
+            }`}
           >
             <PanelRight className="h-4 w-4" strokeWidth={1.8} />
             <span className="tabular-nums">{pool.entries.length}</span>
@@ -173,29 +179,14 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {panels.sessions ? (
-          <div className="hidden w-[220px] shrink-0 border-r border-ds-border-muted bg-ds-sidebar min-[900px]:block">
-            <PaperResearchSessionList
-              sessions={sessions}
-              activeSessionId={activeSession ? activeSession.sessionId : null}
-              runningThreadId={running && activeSession ? activeSession.threadId : null}
-              onSelect={(id) => selectPaperResearchSession(id)}
-              onNew={() => selectPaperResearchSession(null)}
-            />
-          </div>
-        ) : null}
-
         <div ref={stageRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
           {!assistant ? (
-            <p className="m-auto text-[12.5px] text-ds-faint">{t('writePaperSearchAgentUnavailable')}</p>
+            <div className="m-auto flex items-center gap-2 text-[12.5px] text-ds-faint">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t('paperResearchLoading')}
+            </div>
           ) : !activeSession ? (
-            <PaperResearchEmpty
-              key={draft?.query ?? ''}
-              draft={draft}
-              starting={starting}
-              runtimeReady={assistant.runtimeConnection === 'ready'}
-              onStart={start}
-            />
+            <PaperResearchEmpty assistant={assistant} draft={draft} starting={starting} onStart={start} />
           ) : !bound ? (
             <div className="m-auto flex items-center gap-2 text-[12.5px] text-ds-faint">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -205,8 +196,7 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
             <PaperResearchStage assistant={assistant} newCountByBlock={pool.newCountByBlock} />
           )}
         </div>
-
-        {activeSession && bound && panels.pool ? (
+        {showPool ? (
           <div className="hidden w-[300px] shrink-0 border-l border-ds-border-muted min-[1100px]:block">
             <PaperResearchPool pool={pool} onFocusBlock={focusBlock} />
           </div>

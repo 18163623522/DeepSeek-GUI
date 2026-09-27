@@ -99,8 +99,9 @@ describe('PaperResearchView', () => {
 
   it('shows the new-research form when no session is selected', async () => {
     await render(assistant())
-    expect(host.querySelector('textarea')).not.toBeNull()
-    expect(host.textContent).toContain('Agent literature research')
+    expect(host.querySelector('[data-testid="composer"]')).not.toBeNull()
+    expect(host.textContent).toContain('What should we research today?')
+    expect(host.textContent).toContain('Standard')
     expect(host.querySelector('[data-testid="timeline"]')).toBeNull()
   })
 

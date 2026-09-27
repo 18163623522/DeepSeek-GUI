@@ -50,6 +50,7 @@ export type ResearchSessionSummary = {
   title: string
   updatedAt: string | null
   status?: string
+  latestTurnStatus?: string
 }
 
 /**
@@ -79,7 +80,8 @@ export function listResearchSessions(
       threadId,
       title: thread.title?.trim() || sessionId,
       updatedAt: thread.updatedAt ?? null,
-      ...(thread.status ? { status: thread.status } : {})
+      ...(thread.status ? { status: thread.status } : {}),
+      ...(thread.latestTurnStatus ? { latestTurnStatus: thread.latestTurnStatus } : {})
     })
   }
   return out.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))

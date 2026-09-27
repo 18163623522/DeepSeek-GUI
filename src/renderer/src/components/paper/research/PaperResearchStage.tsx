@@ -73,7 +73,7 @@ export function PaperResearchStage({
       <div className="paper-research-stage flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="paper-research-timeline flex min-h-0 flex-1 flex-col overflow-hidden">{timeline}</div>
         <div className="shrink-0 px-4 pb-4 pt-2">
-          <div className="mx-auto w-full max-w-[820px]">
+          <div className="mx-auto w-full max-w-[760px]">
             <FloatingComposer
               workspaceRootOverride={workspaceRoot}
               input={assistant.input}
