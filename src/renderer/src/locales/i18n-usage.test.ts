@@ -97,11 +97,20 @@ function lineOf(source: ts.SourceFile, node: ts.Node): number {
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1
 }
 
+// Findings can only come from a useTranslation(, t(, or .t( call site, so
+// files without a raw-text hint skip the TypeScript parse entirely. This
+// keeps the whole-tree contract scan well under the default test timeout on
+// slower CI runners.
+const I18N_CALL_HINT =
+  /(?:^|[^\w$])(?:useTranslation\b|t)\s*(?:<[^()]{0,200}>)?\s*\(/
+
 function inspectFile(file: string): string[] {
   const absolute = resolve(REPOSITORY_ROOT, file)
+  const text = readFileSync(absolute, 'utf8')
+  if (!I18N_CALL_HINT.test(text)) return []
   const source = ts.createSourceFile(
     file,
-    readFileSync(absolute, 'utf8'),
+    text,
     ts.ScriptTarget.Latest,
     true,
     file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
@@ -173,5 +182,5 @@ describe('renderer i18n usage contract', () => {
   it('uses only registered namespaces and validates migrated English resources', () => {
     const findings = productionRendererFiles().flatMap(inspectFile)
     expect(findings).toEqual([])
-  })
+  }, 30_000)
 })
