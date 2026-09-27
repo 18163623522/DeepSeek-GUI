@@ -66,10 +66,12 @@ function yearsLabel(scope: PaperResearchScope, t: (key: string, opts?: Record<st
  */
 export function PaperResearchScopeChips({
   scope,
-  onChange
+  onChange,
+  showDepth = true
 }: {
   scope: PaperResearchScope
   onChange: (next: PaperResearchScope) => void
+  showDepth?: boolean
 }): ReactElement {
   const { t } = useTranslation('common')
   const sourcesLabel = scope.sources.length <= 2
@@ -77,7 +79,7 @@ export function PaperResearchScopeChips({
     : t('paperResearchSourcesCount', { count: scope.sources.length })
   return (
     <div className="flex flex-wrap items-center gap-0.5">
-      <ScopeChip icon={<Gauge className="h-3.5 w-3.5" strokeWidth={1.8} />} label={t(`paperResearchDepth_${scope.depth}`)}>
+      {showDepth ? <ScopeChip icon={<Gauge className="h-3.5 w-3.5" strokeWidth={1.8} />} label={t(`paperResearchDepth_${scope.depth}`)}>
         {DEPTHS.map((depth) => (
           <button
             key={depth}
@@ -92,7 +94,7 @@ export function PaperResearchScopeChips({
             </span>
           </button>
         ))}
-      </ScopeChip>
+      </ScopeChip> : null}
       <ScopeChip icon={<Library className="h-3.5 w-3.5" strokeWidth={1.8} />} label={sourcesLabel}>
         <div className="grid max-h-[300px] grid-cols-2 gap-0.5 overflow-y-auto">
           {PAPER_SEARCH_SOURCES.map((source) => {

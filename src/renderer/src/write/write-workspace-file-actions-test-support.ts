@@ -26,7 +26,7 @@ export function makeWriteFileActionBaseState(): WriteWorkspaceState {
     paperReading: defaultWriteSettings().paperReading,
     paperMode: defaultWriteSettings().paperMode,
     workSurface: 'docs',
-    paperResearch: { agentTab: false, sessionId: null },
+    paperResearch: { agentTab: true, sessionId: null },
     imageGenReady: false, prototypeReady: false, settingsLoading: false, settingsError: null,
     ...initialState(),
     previewMode: 'rich', assistantOpen: true, assistantModel: 'auto', assistantProviderId: '',

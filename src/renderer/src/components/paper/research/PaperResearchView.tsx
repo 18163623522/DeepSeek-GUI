@@ -7,13 +7,18 @@ import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
 import { usePaperModeStore } from '../../../paper/paper-mode-store'
 import { usePaperStore } from '../../../write/paper/paper-store'
 import { buildResearchPool } from '../../../paper/paper-research-pool'
-import { listResearchSessions, readLastResearchSession } from '../../../paper/paper-research-sessions'
+import {
+  listResearchSessions,
+  readLastResearchSession,
+  researchResourcePath
+} from '../../../paper/paper-research-sessions'
 import {
   selectPaperResearchSession,
   startPaperResearch,
   type PaperResearchRequest
 } from '../../../paper/paper-research-actions'
 import { useWriteAssistantStage } from '../../write/WriteAssistantStageContext'
+import { paperResearchStageActive } from '../../../paper/paper-view'
 import { PaperSearchTabs } from '../discover/PaperSearchScope'
 import { PaperResearchEmpty } from './PaperResearchEmpty'
 import { PaperResearchPool } from './PaperResearchPool'
@@ -87,6 +92,21 @@ export function PaperResearchView({ onShowDirect }: { onShowDirect: () => void }
     const last = readLastResearchSession(libraryRoot)
     if (last && sessions.some((session) => session.sessionId === last)) selectPaperResearchSession(last)
   }, [libraryRoot, sessions, sessionId, draft])
+
+  // The resource → thread effect normally binds the session within a tick;
+  // if something else holds editor focus or selection lags, select directly.
+  useEffect(() => {
+    if (!activeSession || bound) return
+    const timer = setTimeout(() => {
+      if (!paperResearchStageActive(useWriteWorkspaceStore.getState())) return
+      void useChatStore.getState().selectWriteThread(
+        activeSession.threadId,
+        libraryRoot,
+        researchResourcePath(libraryRoot, activeSession.sessionId)
+      )
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [activeSession, bound, libraryRoot])
 
   const start = (request: PaperResearchRequest): void => {
     setStarting(true)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
-import { BellPlus, History, Loader2, Search, Sparkles, X } from 'lucide-react'
+import { BellPlus, History, Loader2, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { PaperSearchSource } from '@shared/paper/paper-search'
 import { paperViewOwnsKeyEvent } from './paper-view-keys'
@@ -14,7 +14,10 @@ import {
   writeSearchSources,
   type PaperSearchHistoryEntry
 } from '../../../paper/paper-search-prefs'
-import { PaperSearchScopeRow, PaperSearchTabs } from './PaperSearchScope'
+import { PaperSearchTabs } from './PaperSearchScope'
+import { PaperQuickSearchBar } from './PaperQuickSearchBar'
+import { PaperHeaderIconButton, PaperViewHeader } from '../PaperViewHeader'
+import { PaperResearchScopeChips, type PaperResearchScope } from '../research/PaperResearchScopeChips'
 import { PaperResearchView } from '../research/PaperResearchView'
 import { usePaperStore } from '../../../write/paper/paper-store'
 import { useWriteWorkspaceStore } from '../../../write/write-workspace-store'
@@ -201,123 +204,109 @@ export function PaperSearchView(): ReactElement {
   if (agentTab) return <PaperResearchView onShowDirect={() => setTab('direct')} />
 
   const busy = discover.searchLoading
+  const hasResult = Boolean(discover.searchResult) || (busy && Boolean(discover.searchQuery))
+  const scope: PaperResearchScope = { depth: 'standard', sources, yearFrom, yearTo }
+  const updateScope = (next: PaperResearchScope): void => {
+    if (next.sources !== sources) {
+      setSources(next.sources)
+      writeSearchSources(next.sources)
+    }
+    setYearFrom(next.yearFrom)
+    setYearTo(next.yearTo)
+  }
+  const scopeChips = <PaperResearchScopeChips scope={scope} onChange={updateScope} showDepth={false} />
+  const headerActions = hasResult ? (
+    <>
+      <PaperHeaderIconButton label={t('writePaperSearchSubscribe')} onClick={subscribeSearch}>
+        <BellPlus className="h-4 w-4" strokeWidth={1.8} />
+      </PaperHeaderIconButton>
+      <button
+        type="button"
+        onClick={handOffToAgent}
+        title={t('writePaperSearchAgentHint')}
+        className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+      >
+        <Sparkles className="h-3.5 w-3.5 text-[var(--ds-accent)]" strokeWidth={1.9} />
+        {t('paperResearchHandOff')}
+      </button>
+    </>
+  ) : null
+
   return (
-    <div ref={rootRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto w-full max-w-[1040px] px-6 pb-10 pt-8">
-        <h1 className="text-[20px] font-semibold tracking-tight text-ds-ink">{t('writePaperSearchTitle')}</h1>
-        <p className="mt-1 text-[12.5px] text-ds-muted">{t('writePaperSearchSubtitle')}</p>
-
-        <div className="mt-5 flex items-center gap-2">
-          <PaperSearchTabs tab="direct" onChange={setTab} />
-          <label className="relative flex h-10 min-w-0 flex-1 items-center">
-            <Search className="pointer-events-none absolute left-3 h-4 w-4 text-ds-faint" strokeWidth={1.9} />
-            <input
-              ref={inputRef}
+    <div ref={rootRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <PaperViewHeader leading={<PaperSearchTabs tab="direct" compact onChange={setTab} />} actions={headerActions} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {hasResult ? (
+          <div className="mx-auto w-full max-w-[960px] px-6 pb-10 pt-5">
+            <PaperQuickSearchBar
               value={input}
-              autoFocus
-              list="kun-paper-search-history"
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.nativeEvent.isComposing) runSearch()
-              }}
-              placeholder={t('writePaperSearchQueryPlaceholder')}
-              aria-label={t('writePaperSearchQueryPlaceholder')}
-              className="h-10 w-full rounded-lg border border-ds-border bg-ds-main pl-9 pr-8 text-[14px] text-ds-ink shadow-sm outline-none transition placeholder:text-ds-faint focus:border-[var(--ds-accent)]"
+              onChange={setInput}
+              onSubmit={() => runSearch()}
+              busy={busy}
+              size="compact"
+              inputRef={inputRef}
             />
-            {input ? (
-              <button
-                type="button"
-                aria-label={t('clearSearch')}
-                onClick={() => setInput('')}
-                className="absolute right-2 rounded p-1 text-ds-faint hover:text-ds-ink"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={2} />
-              </button>
+            <div className="mt-2 px-1">{scopeChips}</div>
+            {discover.searchError ? (
+              <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+                {discover.searchError}
+              </p>
             ) : null}
-          </label>
-          <datalist id="kun-paper-search-history">
-            {history.map((entry) => (
-              <option key={`${entry.at}:${entry.query}`} value={entry.query} />
-            ))}
-          </datalist>
-          <button
-            type="button"
-            onClick={() => runSearch()}
-            disabled={!input.trim() || busy}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-[var(--ds-control)] px-4 text-[13px] font-medium text-[var(--ds-control-foreground)] transition hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" strokeWidth={2} />}
-            {t('writePaperSearchRun')}
-          </button>
-          <button
-            type="button"
-            onClick={subscribeSearch}
-            disabled={!(discover.searchQuery || input).trim()}
-            title={t('writePaperSearchSubscribeHint')}
-            aria-label={t('writePaperSearchSubscribe')}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ds-border text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink disabled:opacity-50"
-          >
-            <BellPlus className="h-4 w-4" strokeWidth={1.9} />
-          </button>
-          <button
-            type="button"
-            onClick={handOffToAgent}
-            title={t('writePaperSearchAgentHint')}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-ds-border px-3 text-[13px] font-medium text-ds-ink transition hover:bg-ds-hover"
-          >
-            <Sparkles className="h-4 w-4 text-[var(--ds-accent)]" strokeWidth={1.9} />
-            {t('paperResearchHandOff')}
-          </button>
-        </div>
-
-        <PaperSearchScopeRow
-          sources={sources}
-          onToggleSource={toggleSource}
-          yearFrom={yearFrom}
-          yearTo={yearTo}
-          onYearFrom={setYearFrom}
-          onYearTo={setYearTo}
-        />
-
-        {discover.searchError ? (
-          <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-            {discover.searchError}
-          </p>
-        ) : null}
-
-        {busy && !discover.searchResult ? (
-          <div className="flex items-center justify-center gap-2 py-20 text-[12.5px] text-ds-faint">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {t('writePaperSearchSearching', { count: sources.length })}
+            {busy && !discover.searchResult ? (
+              <div className="flex items-center justify-center gap-2 py-20 text-[12.5px] text-ds-faint">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('writePaperSearchSearching', { count: sources.length })}
+              </div>
+            ) : null}
+            {discover.searchResult ? (
+              <div className={busy ? 'pointer-events-none opacity-60 transition' : 'transition'}>
+                <PaperSearchResults
+                  result={discover.searchResult}
+                  workspaceRoot={workspaceRoot}
+                  onRetrySource={retrySource}
+                  t={t}
+                />
+              </div>
+            ) : null}
           </div>
-        ) : null}
-
-        {discover.searchResult ? (
-          <div className={busy ? 'pointer-events-none opacity-60 transition' : 'transition'}>
-            <PaperSearchResults
-              result={discover.searchResult}
-              workspaceRoot={workspaceRoot}
-              onRetrySource={retrySource}
-              t={t}
-            />
-          </div>
-        ) : !busy ? (
-          <div className="mt-10 text-center">
-            <p className="text-[12.5px] text-ds-faint">{t('writePaperSearchEmptyHint')}</p>
+        ) : (
+          <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col justify-center px-6 pb-[14vh] pt-10">
+            <div className="text-center">
+              <h1 className="text-[24px] font-medium leading-tight tracking-[-0.025em] text-ds-ink sm:text-[28px]">
+                {t('paperQuickSearchTitle')}
+              </h1>
+              <p className="mx-auto mt-3 max-w-[560px] text-[13px] leading-6 text-ds-muted">{t('paperQuickSearchSub')}</p>
+            </div>
+            <div className="mt-7">
+              <div className="mb-1.5 px-1">{scopeChips}</div>
+              <PaperQuickSearchBar
+                value={input}
+                onChange={setInput}
+                onSubmit={() => runSearch()}
+                busy={busy}
+                size="hero"
+                inputRef={inputRef}
+              />
+            </div>
+            {discover.searchError ? (
+              <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+                {discover.searchError}
+              </p>
+            ) : null}
             {history.length ? (
-              <div className="mt-3">
-                <p className="mb-1.5 inline-flex items-center gap-1 text-[11px] text-ds-faint">
+              <div className="mt-6">
+                <p className="mb-2 flex items-center justify-center gap-1 text-[11.5px] text-ds-faint">
                   <History className="h-3 w-3" strokeWidth={1.8} />
                   {t('writePaperSearchHistory')}
                 </p>
                 <div className="flex flex-wrap justify-center gap-1.5">
-                  {history.slice(0, 8).map((entry) => (
+                  {history.slice(0, 6).map((entry) => (
                     <button
                       key={`${entry.at}:${entry.query}`}
                       type="button"
                       title={new Date(entry.at).toLocaleString()}
                       onClick={() => applyHistoryEntry(entry)}
-                      className="rounded-md border border-ds-border-muted px-2.5 py-1 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+                      className="max-w-[260px] truncate rounded-full border border-ds-border-muted px-3 py-1 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
                     >
                       {entry.query}
                     </button>
@@ -325,22 +314,21 @@ export function PaperSearchView(): ReactElement {
                 </div>
               </div>
             ) : null}
-            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+            <div className="mt-4 flex flex-wrap justify-center gap-1.5">
               {EXAMPLE_QUERIES.map((example) => (
                 <button
                   key={example}
                   type="button"
                   onClick={() => runSearch(example)}
-                  className="rounded-md border border-ds-border-muted px-2.5 py-1 text-[12px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+                  className="rounded-full border border-ds-border-muted px-3 py-1 text-[12px] text-ds-faint transition hover:bg-ds-hover hover:text-ds-ink"
                 >
                   {example}
                 </button>
               ))}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   )
 }
-

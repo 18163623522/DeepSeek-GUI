@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { paperViewOwnsKeyEvent } from './paper-view-keys'
 import {
-  AlertCircle,
   BookOpenText,
   CheckSquare,
   FileText,
@@ -261,29 +260,16 @@ export function PaperSearchResults({
             ? ` ${t('writePaperSearchResultFiltered', { count: result.hits.length })}`
             : ''}
         </span>
-        <span className="flex flex-wrap items-center gap-1">
-          {result.sources.map((report) => (
-            <button
-              key={report.source}
-              type="button"
-              title={
-                report.error
-                  ? `${report.error} — ${t('writePaperSearchSourceRetryHint')}`
-                  : `${(report.ms / 1000).toFixed(1)}s`
-              }
-              onClick={() => (report.error ? onRetrySource(report.source) : undefined)}
-              className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] tabular-nums transition ${
-                report.error
-                  ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900'
-                  : 'bg-ds-subtle text-ds-muted'
-              }`}
-            >
-              {report.error ? <AlertCircle className="h-3 w-3" strokeWidth={2} /> : null}
-              {t(`writePaperSearchSource_${report.source}`)}
-              <span className="text-ds-faint">{report.error ? t('writePaperSearchSourceFailed') : report.count}</span>
-            </button>
-          ))}
-        </span>
+        {hits.length && !selectedHits.length ? (
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+          >
+            <Square className="h-3.5 w-3.5" strokeWidth={1.8} />
+            {t('writePaperSearchSelectAll')}
+          </button>
+        ) : null}
         <div className="ml-auto flex h-7 items-center rounded-md border border-ds-border-muted bg-ds-subtle p-0.5">
           {SORTS.map((key) => (
             <button
@@ -322,7 +308,7 @@ export function PaperSearchResults({
         t={t}
       />
 
-      {hits.length ? (
+      {selectedHits.length ? (
         <PaperSearchSelectionBar
           total={hits.length}
           selectedCount={selectedHits.length}
@@ -426,8 +412,8 @@ function SearchHitRow({
       data-hit-index={index}
       onMouseEnter={onFocus}
       className={`rounded-lg border px-4 py-3 transition ${
-        focused ? 'border-accent/60 bg-accent-tint/[0.04]' : 'border-ds-border-muted bg-ds-card'
-      } ${detailOpen ? 'border-accent/50' : ''}`}
+        focused ? 'border-accent-tint/60 bg-accent-tint/[0.04]' : 'border-ds-border-muted bg-ds-card'
+      } ${detailOpen ? 'border-accent-tint/50' : ''}`}
     >
       <div className="flex items-start gap-3">
         <button

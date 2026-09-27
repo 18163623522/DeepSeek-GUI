@@ -248,16 +248,17 @@ export function PaperResearchPool({
                 className="min-w-0 flex-1 text-left"
               >
                 <span className="line-clamp-2 text-[12.5px] leading-[1.35] text-ds-ink">{entry.title}</span>
-                <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[10.5px] text-ds-faint">
+                <span className="mt-0.5 flex min-w-0 items-center gap-1 whitespace-nowrap text-[10.5px] text-ds-faint">
                   {priority ? (
-                    <span className={`rounded px-1 font-medium ${PRIORITY_TONE[priority]}`}>{t(`paperResearchPriority_${priority}`)}</span>
+                    <span className={`shrink-0 rounded px-1 font-medium ${PRIORITY_TONE[priority]}`}>{t(`paperResearchPriority_${priority}`)}</span>
                   ) : entry.recommended ? (
-                    <span className="rounded bg-ds-subtle px-1 font-medium text-ds-muted">{t('paperResearchPoolRecommendedBadge')}</span>
+                    <span className="shrink-0 rounded bg-ds-subtle px-1 font-medium text-ds-muted">{t('paperResearchPoolRecommendedBadge')}</span>
                   ) : null}
-                  {[entry.year ? String(entry.year) : '', entry.venue ?? ''].filter(Boolean).join(' · ')}
-                  {entry.sources.length ? <span>· {t('paperToolSourceCount', { count: entry.sources.length })}</span> : null}
-                  {entry.hits > 1 ? <span>· ×{entry.hits}</span> : null}
-                  {owned ? <span className="text-emerald-700 dark:text-emerald-300">· {t('writePaperRefInLibrary')}</span> : null}
+                  <span className="min-w-0 truncate">
+                    {[entry.year ? String(entry.year) : '', entry.venue ?? ''].filter(Boolean).join(' · ')}
+                  </span>
+                  {entry.hits > 1 ? <span className="shrink-0 tabular-nums">×{entry.hits}</span> : null}
+                  {owned ? <span className="shrink-0 text-emerald-700 dark:text-emerald-300">{t('writePaperRefInLibrary')}</span> : null}
                 </span>
               </button>
             </li>

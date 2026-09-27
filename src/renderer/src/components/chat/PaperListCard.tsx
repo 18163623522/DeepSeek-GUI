@@ -25,6 +25,8 @@ import { ImportButton } from '../paper/discover/PaperDiscoverParts'
 
 const PRIORITY_ORDER = { must: 0, should: 1, optional: 2 } as const
 
+const COLLAPSED_ENTRIES = 6
+
 function entryImportInput(entry: RendererPaperListEntry): string | undefined {
   return (entry.paper ? paperCardImportInput(entry.paper) : undefined) ?? entry.id
 }
@@ -90,6 +92,7 @@ export function PaperListCard({
   )
   const [importing, setImporting] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(false)
 
   const groups = useMemo(() => {
     const out: Array<{ label: string; entries: RendererPaperListEntry[] }> = []
@@ -107,6 +110,19 @@ export function PaperListCard({
     }
     return out
   }, [list.papers])
+
+  // Long lists stay compact in the transcript; no nested scroll region.
+  const visibleGroups = useMemo(() => {
+    if (expanded) return groups
+    let budget = COLLAPSED_ENTRIES
+    const out: typeof groups = []
+    for (const group of groups) {
+      if (budget <= 0) break
+      out.push({ label: group.label, entries: group.entries.slice(0, budget) })
+      budget -= group.entries.length
+    }
+    return out
+  }, [expanded, groups])
 
   const verifiedCount = list.papers.filter((entry) => entry.verified).length
   const selectedEntries = list.papers.filter((entry) => selected.has(entry.id))
@@ -197,11 +213,11 @@ export function PaperListCard({
         </p>
       ) : null}
 
-      <div className="max-h-[420px] overflow-y-auto">
-        {groups.map((group) => (
+      <div>
+        {visibleGroups.map((group) => (
           <div key={group.label || '__none__'}>
             {group.label ? (
-              <p className="sticky top-0 bg-ds-card/95 px-3.5 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wide text-ds-faint backdrop-blur">
+              <p className="px-3.5 pb-1 pt-2.5 text-[10.5px] font-semibold uppercase tracking-wide text-ds-faint">
                 {group.label}
               </p>
             ) : null}
@@ -219,6 +235,15 @@ export function PaperListCard({
             </ul>
           </div>
         ))}
+        {list.papers.length > COLLAPSED_ENTRIES ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="flex w-full items-center justify-center gap-1 border-t border-ds-border-muted py-1.5 text-[11.5px] text-ds-muted transition hover:bg-ds-hover hover:text-ds-ink"
+          >
+            {expanded ? t('paperToolShowLess') : t('paperToolShowAll', { count: list.papers.length })}
+          </button>
+        ) : null}
       </div>
 
       <footer className="flex flex-wrap items-center gap-1.5 border-t border-ds-border-muted px-3 py-2">
@@ -278,11 +303,11 @@ export function PaperListSkeleton({ title }: { title?: string }): ReactElement {
       className="rounded-xl border border-ds-border-muted bg-ds-card p-3.5"
     >
       <div className="h-4 w-48 max-w-full rounded bg-ds-subtle" />
-      <div className="mt-2 h-3 w-72 max-w-full rounded bg-ds-subtle/80" />
+      <div className="mt-2 h-3 w-72 max-w-full rounded bg-ds-subtle" />
       <div className="mt-3 space-y-2">
-        <div className="h-8 rounded bg-ds-subtle/70" />
-        <div className="h-8 rounded bg-ds-subtle/70" />
-        <div className="h-8 rounded bg-ds-subtle/70" />
+        <div className="h-8 rounded bg-ds-subtle" />
+        <div className="h-8 rounded bg-ds-subtle" />
+        <div className="h-8 rounded bg-ds-subtle" />
       </div>
     </section>
   )
@@ -306,7 +331,7 @@ function PaperListRow({
   const metaLine = entryMetaLine(entry)
   const paper = entry.paper
   return (
-    <li className="flex items-start gap-2 px-3.5 py-2 transition hover:bg-ds-hover/50">
+    <li className="flex items-start gap-2 px-3.5 py-2 transition hover:bg-ds-hover">
       <button
         type="button"
         role="checkbox"
