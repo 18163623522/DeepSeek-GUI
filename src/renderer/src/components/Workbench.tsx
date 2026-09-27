@@ -580,7 +580,7 @@ export function Workbench(): ReactElement {
 
   const {
     chatComposerProps, conversationRuntimeBanner, imageAnnotationHost, planOverlay,
-    rightPanel, rightPanelSharedProps, writeRuntimeBanner, focusedCanvasWorkspace
+    rightPanel, rightPanelSharedProps, writeRuntimeBanner, focusedCanvasWorkspace, writeAssistantStageProps
   } = useWorkbenchShellRuntime({
     canvasFocusMode,
     exitCanvasFocusMode,
@@ -655,7 +655,7 @@ export function Workbench(): ReactElement {
     designWorkspaceRoot, workspaceRoot, designAssistantModel, resolvedDesignAssistantProviderId,
     designAssistantPickList, setDesignAssistantModel, designComposerReasoningEffort,
     composerFastMode, setDesignComposerReasoningEffort, setComposerFastMode, designContextChips,
-    removeDesignContextChip, input, rightPanel, writeRuntimeBanner, setInput, sendWritePrompt,
+    removeDesignContextChip, input, rightPanel, writeRuntimeBanner, writeAssistantStageProps, setInput, sendWritePrompt,
     conversationRuntimeBanner, activeSddDraft, rightPanelMode, toggleSddAssistantPanel,
     quoteToSddAssistant, sendSddPrototypeTurn, exploreSddRequirementInDesign, handleSddNextStep,
     dismissActiveSddDraft, sddDraftOperationStatus, stageInsetClass, uiModeCameosEnabled,
