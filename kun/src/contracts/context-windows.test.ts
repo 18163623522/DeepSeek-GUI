@@ -137,6 +137,7 @@ describe('turn mode snapshot contract', () => {
   it('freezes mode, window id, and window seq for enabled and summary turns', () => {
     expect(ContextWindowModeSchema.parse('windows')).toBe('windows')
     expect(ContextWindowModeSchema.parse('summary')).toBe('summary')
+    expect(ContextWindowModeSchema.parse('model_compact')).toBe('model_compact')
     const enabled = ContextWindowTurnModeSnapshotSchema.parse({
       mode: 'windows', windowId: 'win-2', windowSeq: 2
     })

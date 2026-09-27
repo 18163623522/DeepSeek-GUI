@@ -237,7 +237,9 @@ export function normalizeKunContextCompactionSettings(
     // longer a user-selectable mode, so any stored value coerces to 'model' —
     // this self-heals stale 'heuristic' configs from the removed UI toggle.
     summaryMode: 'model',
-    windowModeEnabled: upgraded.windowModeEnabled === true,
+    modelInitiatedCompactionEnabled: upgraded.modelInitiatedCompactionEnabled === true,
+    windowModeEnabled: upgraded.modelInitiatedCompactionEnabled === true
+      && upgraded.windowModeEnabled === true,
     summaryTimeoutMs: boundedPositiveInt(upgraded.summaryTimeoutMs, defaults.summaryTimeoutMs, 120_000),
     summaryMaxTokens: boundedPositiveInt(upgraded.summaryMaxTokens, defaults.summaryMaxTokens, 16_000),
     summaryInputMaxBytes: boundedPositiveInt(upgraded.summaryInputMaxBytes, defaults.summaryInputMaxBytes, 8 * 1024 * 1024),
@@ -258,17 +260,29 @@ export function migrateKunContextCompactionDefaults(
   input: Partial<KunContextCompactionSettingsV1> | undefined
 ): Partial<KunContextCompactionSettingsV1> {
   const current = input ?? {}
-  const defaultsVersion = boundedPositiveInt(current.defaultsVersion, 0)
-  if (defaultsVersion >= KUN_CONTEXT_COMPACTION_DEFAULTS_VERSION) return current
+  // Legacy window-mode installs stored only windowModeEnabled. Promote the
+  // parent switch so those users keep the same effective windows strategy.
+  // One-field UI patches (windowModeEnabled only) are left alone.
+  const looksLikeStoredRecord = current.defaultsVersion !== undefined
+    || current.summaryMode !== undefined
+    || current.defaultSoftThreshold !== undefined
+  const withParent = current.windowModeEnabled === true
+    && current.modelInitiatedCompactionEnabled === undefined
+    && looksLikeStoredRecord
+    ? { ...current, modelInitiatedCompactionEnabled: true }
+    : current
+
+  const defaultsVersion = boundedPositiveInt(withParent.defaultsVersion, 0)
+  if (defaultsVersion >= KUN_CONTEXT_COMPACTION_DEFAULTS_VERSION) return withParent
 
   const matchesLegacyDefaults = LEGACY_KUN_CONTEXT_COMPACTION_DEFAULTS.some(
     ({ soft, hard }) =>
-      current.defaultSoftThreshold === soft &&
-      current.defaultHardThreshold === hard
+      withParent.defaultSoftThreshold === soft &&
+      withParent.defaultHardThreshold === hard
   )
   const defaults = defaultKunContextCompactionSettings()
   return {
-    ...current,
+    ...withParent,
     defaultsVersion: KUN_CONTEXT_COMPACTION_DEFAULTS_VERSION,
     ...(matchesLegacyDefaults
       ? {

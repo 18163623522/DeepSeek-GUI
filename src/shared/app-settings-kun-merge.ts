@@ -115,6 +115,7 @@ import {
   normalizeKunQualitySettings
 } from './app-settings-kun-migration'
 import {
+  migrateKunContextCompactionDefaults,
   normalizeKunContextCompactionSettings,
   normalizeKunLlmDebugSettings,
   normalizeKunMcpSearchSettings,
@@ -177,7 +178,7 @@ export function mergeKunRuntimeSettings(
     ...(patch?.storage ?? {})
   })
   const currentContextCompaction = normalizeKunContextCompactionSettings(current.contextCompaction)
-  const contextCompactionPatch = patch?.contextCompaction ?? {}
+  const contextCompactionPatch = migrateKunContextCompactionDefaults(patch?.contextCompaction ?? {})
   const nextContextCompactionInput = {
     ...currentContextCompaction,
     ...contextCompactionPatch

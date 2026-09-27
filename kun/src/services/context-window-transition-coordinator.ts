@@ -8,12 +8,18 @@ import type { ContextWindowTurnModes } from './context-window-turn-modes.js'
 import type { ContextWindowBudget } from '../loop/context-window-budget.js'
 import type { ContextWindowStateRestore } from './context-window-state.js'
 import { buildWindowInitializationText } from './context-window-initialization.js'
+import { COMPACT_CONTEXT_TOOL_NAME } from './context-compact-coordinator.js'
 import { WINDOW_INIT_ITEM_PREFIX } from '../loop/context-window-instructions.js'
 
 /** runtime_context_source content ceiling from the item contract. */
 const INIT_MAX_CHARS = 32_768
 
 export const NEW_CONTEXT_TOOL_NAME = 'new_context'
+
+const EXCLUSIVE_CONTEXT_CONTROL_TOOLS = new Set([
+  NEW_CONTEXT_TOOL_NAME,
+  COMPACT_CONTEXT_TOOL_NAME
+])
 
 /**
  * Progress measure for the no-transition-without-work guard. Control records
@@ -37,19 +43,20 @@ export function countOrdinaryWorkItems(items: readonly TurnItem[]): number {
 }
 
 /**
- * Tool-batch precheck: `new_context` is the exclusive window-transition
- * control and must never share a batch with other calls. The check is pure so
+ * Tool-batch precheck: `new_context` and `compact_context` are exclusive
+ * controls and must never share a batch with other calls. The check is pure so
  * dispatch can run it before any side effect happens. Returns an Error to
  * reject with, or null when the batch is admissible.
  */
 export function exclusiveNewContextBatchError(
   calls: ReadonlyArray<{ toolName: string }>
 ): Error | null {
-  const transitions = calls.filter((call) => call.toolName === NEW_CONTEXT_TOOL_NAME)
-  if (transitions.length === 0) return null
+  const exclusive = calls.filter((call) => EXCLUSIVE_CONTEXT_CONTROL_TOOLS.has(call.toolName))
+  if (exclusive.length === 0) return null
   if (calls.length === 1) return null
+  const name = exclusive[0]?.toolName ?? NEW_CONTEXT_TOOL_NAME
   return new Error(
-    'new_context must be invoked on its own; retry it as a separate call without other tool calls in the same batch'
+    `${name} must be invoked on its own; retry it as a separate call without other tool calls in the same batch`
   )
 }
 

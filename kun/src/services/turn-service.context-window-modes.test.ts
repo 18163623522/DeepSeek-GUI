@@ -107,4 +107,44 @@ describe('TurnService context-window mode freeze', () => {
     expect(modes.windowFor('child')).toBeUndefined()
     await service.interruptActiveTurns()
   })
+
+  it('fails closed when model_compact is accepted but the route cannot execute tools', async () => {
+    const sessionStore = new InMemorySessionStore()
+    const threadStore = new InMemoryThreadStore()
+    const eventBus = new InMemoryEventBus()
+    const modes = new ContextWindowTurnModes(() => 'model_compact')
+    const service = new TurnService({
+      threadStore,
+      sessionStore,
+      events: new RuntimeEventRecorder({
+        eventBus,
+        sessionStore,
+        allocateSeq: (threadId) => eventBus.allocateSeq(threadId),
+        nowIso: () => '2026-09-14T00:00:00.000Z'
+      }),
+      inflight: new InflightTracker(),
+      steering: new SteeringQueue(),
+      compactor: new ContextCompactor(),
+      contextWindowModes: modes,
+      ids: new SequentialIdGenerator(),
+      nowIso: () => '2026-09-14T00:00:00.000Z',
+      modelCapabilities: () => ({
+        id: 'test-model',
+        inputModalities: ['text'],
+        outputModalities: ['text'],
+        supportsToolCalling: false,
+        messageParts: ['text']
+      })
+    })
+    await threadStore.upsert(createThreadRecord({
+      id: 'threadA',
+      title: 'No tools',
+      workspace: '/tmp/workspace',
+      model: 'test-model'
+    }))
+    await expect(service.startTurn({
+      threadId: 'threadA',
+      request: { prompt: 'first' }
+    })).rejects.toThrow('model-initiated context compression requires a route with tool support')
+  })
 })

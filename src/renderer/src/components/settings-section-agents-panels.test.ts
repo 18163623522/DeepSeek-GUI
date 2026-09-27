@@ -159,7 +159,7 @@ describe('AgentsSettingsSection Kun diagnostics smoke', () => {
       .findAllByProps({ role: 'tab' })
       .filter((tab) => String(tab.props.id ?? '').startsWith('laboratory-settings-tab-'))
     expect(laboratoryTabs.map(instanceText)).toEqual([
-      'Windowed context (experimental)',
+      'Context compression',
       'Session display optimization',
       'Automatic plan and build',
       'Computer control',
@@ -225,7 +225,7 @@ describe('AgentsSettingsSection Kun diagnostics smoke', () => {
     )
   })
 
-  it('updates contextCompaction.windowModeEnabled from the laboratory tab', () => {
+  it('updates contextCompaction flags from the laboratory tab', () => {
     const updateKun = vi.fn()
     let renderer!: ReactTestRenderer
     act(() => {
@@ -233,16 +233,22 @@ describe('AgentsSettingsSection Kun diagnostics smoke', () => {
         ctx: { ...baseCtx(), updateKun }
       }))
     })
-
-    const tab = renderer.root.findByProps({ id: 'laboratory-settings-tab-contextWindow' })
-    act(() => tab.props.onClick())
     const panel = renderer.root.findByProps({ id: 'laboratory-settings-panel-contextWindow' })
-    expect(instanceText(panel)).toContain('Enable windowed context')
-    const toggle = panel.findByProps({ role: 'switch' })
-    expect(toggle.props['aria-checked']).toBe(false)
-    act(() => toggle.props.onClick())
+    expect(instanceText(panel)).toContain('Context compression')
+    const parentToggle = panel.findByProps({
+      role: 'switch',
+      'aria-label': 'Model-initiated context compression'
+    })
+    expect(panel.findByProps({
+      role: 'switch',
+      'aria-label': 'Enable windowed context'
+    }).props.disabled).toBe(true)
+    act(() => parentToggle.props.onClick())
     expect(updateKun).toHaveBeenCalledWith(expect.objectContaining({
-      contextCompaction: expect.objectContaining({ windowModeEnabled: true })
+      contextCompaction: expect.objectContaining({
+        modelInitiatedCompactionEnabled: true,
+        windowModeEnabled: false
+      })
     }))
   })
 

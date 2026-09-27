@@ -35,7 +35,7 @@ describe('buildContextWindowToolProviders', () => {
   let dataDir: string
   let sessionStore: InMemorySessionStore
   let service: ContextWindowService
-  let mode: 'summary' | 'windows'
+  let mode: 'summary' | 'windows' | 'model_compact'
   let tools: LocalTool[]
 
   const tool = (name: string) => tools.find((candidate) => candidate.name === name)

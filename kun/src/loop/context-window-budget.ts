@@ -32,6 +32,8 @@ export type WindowUsageSample = {
   outputReserveTokens?: number
   /** Provider actual input tokens for the latest same-window request (calibration only). */
   actualInputTokens?: number
+  /** 75% notice names the tool the model should call; window mode keeps new_context. */
+  actionHint?: 'new_context' | 'compact_context'
 }
 
 export type WindowUsageReading = {
@@ -175,7 +177,8 @@ export class ContextWindowBudget {
       windowSeq: state.windowSeq,
       threshold: announced,
       usageRatio: reading.usageRatio,
-      remainingTokens: reading.remainingTokens
+      remainingTokens: reading.remainingTokens,
+      actionHint: sample.actionHint
     })
     state.noticeTokens += estimateNoticeTokens(notice)
     state.updatedAt = this.nowIso()
@@ -206,10 +209,13 @@ export function renderThresholdNotice(input: {
   threshold: number
   usageRatio: number
   remainingTokens: number
+  actionHint?: 'new_context' | 'compact_context'
 }): string {
   const percent = Math.round(input.usageRatio * 100)
   const hint = input.threshold >= 0.75
-    ? 'Consider saving working notes and starting a fresh window with new_context when the current step completes.'
+    ? input.actionHint === 'compact_context'
+      ? 'Consider calling compact_context to summarize older conversation when the current step completes.'
+      : 'Consider saving working notes and starting a fresh window with new_context when the current step completes.'
     : 'Consider trimming tool output or saving progress notes.'
   return `[context window ${input.windowSeq}: ${percent}% used ` +
     `(${(input.remainingTokens / 1000).toFixed(0)}k tokens remaining). ${hint}]`

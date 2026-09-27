@@ -88,10 +88,25 @@ describe('ContextWindowBudget', () => {
     const notice = budget.thresholdNotice(state, { estimatedInputTokens: 800, outputReserveTokens: 100 })
     expect(notice.threshold).toBe(0.75)
     expect(notice.notice).toContain('90%')
+    expect(notice.notice).toContain('new_context')
     // Lower thresholds are marked covered without individual notices.
     expect(state.coveredThresholds).toEqual([...CONTEXT_WINDOW_USAGE_THRESHOLDS])
     const later = budget.thresholdNotice(state, { estimatedInputTokens: 950, outputReserveTokens: 100 })
     expect(later.notice).toBeNull()
+  })
+
+  it('names compact_context in the 75% notice when requested', () => {
+    const budget = makeBudget()
+    const state = budget.startWindow({
+      threadId: 't1', windowId: 'win-1', windowSeq: 0, model: 'small-model'
+    })
+    const notice = budget.thresholdNotice(state, {
+      estimatedInputTokens: 800,
+      outputReserveTokens: 100,
+      actionHint: 'compact_context'
+    })
+    expect(notice.notice).toContain('compact_context')
+    expect(notice.notice).not.toContain('new_context')
   })
 
   it('counts emitted notices into the budget', () => {

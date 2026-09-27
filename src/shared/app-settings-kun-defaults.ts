@@ -473,6 +473,7 @@ export function defaultKunContextCompactionSettings(): KunContextCompactionSetti
     // structured recap of the folded turns instead of a mechanical item list.
     // Falls back to the heuristic summary automatically on timeout/failure.
     summaryMode: 'model',
+    modelInitiatedCompactionEnabled: false,
     windowModeEnabled: false,
     summaryTimeoutMs: 15_000,
     summaryMaxTokens: 2_048,

@@ -150,6 +150,27 @@ describe('ToolCallDispatcher', () => {
     expect(executeSafely).toHaveBeenCalledTimes(1)
   })
 
+  it('rejects a batch mixing compact_context before any side effect', async () => {
+    const executeSafely = vi.fn(async (input: { call: ToolCallLike }) => resultFor(input.call))
+    const dispatcher = new ToolCallDispatcher({
+      executeSafely,
+      persistResult: vi.fn(async () => undefined),
+      persistSuppressed: vi.fn(async () => undefined)
+    } as never)
+
+    await expect(dispatcher.dispatch({
+      dispatch: dispatchInput([call('read', 'read_1'), call('compact_context', 'cc_1')]),
+      context
+    })).resolves.toBe('continue')
+    expect(executeSafely).not.toHaveBeenCalled()
+
+    await dispatcher.dispatch({
+      dispatch: dispatchInput([call('compact_context', 'cc_2')]),
+      context
+    })
+    expect(executeSafely).toHaveBeenCalledTimes(1)
+  })
+
   it('reports execution only after the result is durably persisted', async () => {
     const onToolExecuted = vi.fn()
     const dispatcher = new ToolCallDispatcher({
